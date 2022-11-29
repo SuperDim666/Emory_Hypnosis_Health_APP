@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item type="id"
+        name="audio_entry_filename" />
+    <item type="id"
+        name="boolean_key" />
+</resources>

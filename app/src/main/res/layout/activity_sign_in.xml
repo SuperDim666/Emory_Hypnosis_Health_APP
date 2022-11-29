@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/signInBackgroundColor"
+    android:fitsSystemWindows="false"
+    android:orientation="vertical"
+    tools:context=".SignInControl">
+
+    <RelativeLayout
+        android:id="@+id/SignInControl_no_overlapped"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        tools:ignore="UselessParent">
+
+        <ImageView
+            android:id="@+id/SignInControl_emory_logo_02"
+            android:layout_width="235.8dp"
+            android:layout_height="514.787dp"
+            android:alpha="0.0"
+            android:contentDescription="@string/emory_logo"
+            android:translationX="78.6dp"
+            android:translationY="135.106dp"
+            app:srcCompat="@drawable/emory_logo_02" />
+
+        <ImageView
+            android:id="@+id/SignInControl_emory_logo_01"
+            android:layout_width="275.1dp"
+            android:layout_height="157dp"
+            android:alpha="0.0"
+            android:contentDescription="@string/emory_logo"
+            android:translationX="58.95dp"
+            android:translationY="117.75dp"
+            app:srcCompat="@drawable/emory_logo_01" />
+
+        <RelativeLayout
+            android:id="@+id/SignInControl_bottom_set"
+            android:layout_width="314.4dp"
+            android:layout_height="match_parent"
+            android:translationX="39.3dp"
+            android:translationY="353.25dp">
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_centerInParent="true"
+                android:layout_gravity="center">
+
+                <androidx.cardview.widget.CardView
+                    android:id="@+id/SignInControl_username_mask"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    android:layout_margin="8dp"
+                    app:cardBackgroundColor="#E9E9E9"
+                    app:cardCornerRadius="24dp"
+                    app:cardElevation="0dp"
+                    android:alpha="0.0">
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        app:hintEnabled="false">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/SignInControl_username"
+                            android:layout_width="wrap_content"
+                            android:layout_height="50dp"
+                            android:inputType="none"
+                            android:enabled="false"
+                            android:gravity="center_vertical"
+                            android:layout_gravity="center_vertical"
+                            android:layout_marginLeft="12dp"
+                            android:layout_marginRight="12dp"
+                            android:background="@android:color/transparent"
+                            android:drawableStart="@drawable/ic_person"
+                            android:drawablePadding="12dp"
+                            android:hint="@string/text_usernameDoctor"
+                            android:imeOptions="actionNext"
+                            android:minHeight="50dp"
+                            android:singleLine="true"
+                            android:textColorHint="#546E7A" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                </androidx.cardview.widget.CardView>
+
+                <androidx.cardview.widget.CardView
+                    android:id="@+id/SignInControl_password_mask"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:layout_margin="8dp"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/SignInControl_username_mask"
+                    app:cardBackgroundColor="#E9E9E9"
+                    app:cardCornerRadius="24dp"
+                    app:cardElevation="0dp"
+                    android:alpha="0.0">
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        app:hintEnabled="false"
+                        app:passwordToggleEnabled="true">
+
+                        <EditText
+                            android:id="@+id/SignInControl_password"
+                            android:layout_width="wrap_content"
+                            android:layout_height="50dp"
+                            android:inputType="none"
+                            android:enabled="false"
+                            android:gravity="center_vertical"
+                            android:layout_gravity="center_vertical"
+                            android:layout_marginLeft="12dp"
+                            android:layout_marginRight="12dp"
+                            android:autofillHints="password"
+                            android:background="@android:color/transparent"
+                            android:drawableStart="@drawable/ic_lock"
+                            android:drawablePadding="12dp"
+                            android:hint="@string/text_password"
+                            android:imeOptions="actionDone"
+                            android:minWidth="320dp"
+                            android:minHeight="50dp"
+                            android:textColorHint="#546E7A"
+                            tools:ignore="TextFields" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                </androidx.cardview.widget.CardView>
+
+                <RelativeLayout
+                    android:id="@+id/SignInControl_button01_mask"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/SignInControl_password_mask">
+
+                    <Button
+                        android:id="@+id/SignInControl_button01"
+                        style="@style/Button1"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerHorizontal="true"
+                        android:alpha="0.0"
+                        android:enabled="false"
+                        android:text="@string/signIn_buttonText"
+                        android:textColor="#9BB0C4" />
+
+                </RelativeLayout>
+
+                <RelativeLayout
+                    android:id="@+id/SignInControl_button02_mask"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="0dp"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/SignInControl_button01_mask">
+
+                    <Button
+                        android:id="@+id/SignInControl_button02"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerHorizontal="true"
+                        android:alpha="0.0"
+                        android:enabled="false"
+                        android:text="@string/text_signInSwitchPatient"
+                        android:textColor="#212121"
+                        style="@style/TextyButton" />
+
+                </RelativeLayout>
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+        </RelativeLayout>
+
+    </RelativeLayout>
+
+</RelativeLayout>

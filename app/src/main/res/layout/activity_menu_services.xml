@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/MainPage_Ground"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    android:orientation="vertical"
+    android:scaleType="centerCrop"
+    android:background="@color/signInBackgroundColor">
+
+    <RelativeLayout
+        android:id="@+id/MainPage_Background_ground"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        tools:ignore="UselessParent">
+
+        <ImageView
+            android:id="@+id/MainMenu_emory_logo_02"
+            android:layout_width="235.8dp"
+            android:layout_height="514.787dp"
+            android:alpha="0.0"
+            android:translationX="78.6dp"
+            android:translationY="135.106dp"
+            app:srcCompat="@drawable/emory_logo_02" />
+
+        <ImageView
+            android:id="@+id/MainMenu_emory_logo_01"
+            android:layout_width="275.1dp"
+            android:layout_height="157dp"
+            android:alpha="0.0"
+            android:translationX="58.95dp"
+            android:translationY="117.75dp"
+            app:srcCompat="@drawable/emory_logo_01" />
+
+    </RelativeLayout>
+
+    <!--Main Base-->
+    <RelativeLayout
+        android:id="@+id/MainPage_Base"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        tools:ignore="UselessParent">
+    </RelativeLayout>
+
+    <!--Prepared Bases-->
+    <RelativeLayout
+        android:id="@+id/MainPage_Base02"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        tools:ignore="UselessParent" />
+
+    <RelativeLayout
+        android:id="@+id/MainPage_BaseFinal"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        tools:ignore="UselessParent" >
+    </RelativeLayout>
+
+</RelativeLayout>

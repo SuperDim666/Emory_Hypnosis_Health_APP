@@ -1,0 +1,378 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    android:orientation="vertical">
+
+    <ImageView
+        android:id="@+id/MainPage_Background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:src="@color/signInBackgroundColor"
+        tools:ignore="ContentDescription">
+    </ImageView>
+
+    <ImageView
+        android:id="@+id/MainPage_AudioPage_RecordButton"
+        android:layout_width="384.27dp"
+        android:layout_height="62.37dp"
+        android:layout_marginTop="13.365dp"
+        android:layout_marginStart="13.365dp"
+        android:enabled="true"
+        style="@style/AudioUploadMask"
+        android:layout_centerHorizontal="true"
+        android:text="@string/text_MainMenu_upload"
+        android:textColor="@color/white"
+        >
+    </ImageView>
+
+    <ScrollView
+        android:id="@+id/MainPage_AudioPage_ScrollView"
+        android:layout_width="match_parent"
+        android:layout_height="654.885dp"
+        android:layout_marginTop="89.1dp">
+        <LinearLayout
+            android:id="@+id/MainPage_AudioPage_RecordsList"
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <Button
+                android:layout_width="328.8dp"
+                android:layout_height="53.46dp"
+                android:layout_marginTop="17.82dp"
+                android:layout_marginStart="41.1dp"
+                android:enabled="true"
+                style="@style/AudioUploadMask"
+                android:alpha="1.0"
+                android:text="Hypnosis Audio 01"
+                android:textColor="@color/white" />
+            <Button
+                android:layout_width="328.8dp"
+                android:layout_height="53.46dp"
+                android:layout_marginTop="17.82dp"
+                android:layout_marginStart="41.1dp"
+                android:enabled="true"
+                style="@style/AudioUploadMask"
+                android:layout_centerHorizontal="true"
+                android:alpha="1.0"
+                android:text="Hypnosis Audio 02"
+                android:textColor="@color/white" />
+            <Button
+                android:layout_width="384.27dp"
+                android:layout_height="62.37dp"
+                android:layout_marginTop="13.365dp"
+                android:layout_marginStart="13.365dp"
+                android:layout_marginEnd="13.365dp"
+                android:enabled="true"
+                style="@style/AudioUploadMask"
+                android:layout_centerHorizontal="true"
+                android:alpha="1.0"
+                android:text="Hypnosis Audio 03"
+                android:textColor="@color/white" />
+            <Button
+                android:layout_width="384.27dp"
+                android:layout_height="62.37dp"
+                android:layout_marginTop="13.365dp"
+                android:layout_marginStart="13.365dp"
+                android:layout_marginEnd="13.365dp"
+                android:enabled="true"
+                style="@style/AudioUploadMask"
+                android:layout_centerHorizontal="true"
+                android:alpha="1.0"
+                android:text="Hypnosis Audio 04"
+                android:textColor="@color/white" />
+            <Button
+                android:layout_width="384.27dp"
+                android:layout_height="62.37dp"
+                android:layout_marginTop="13.365dp"
+                android:layout_marginStart="13.365dp"
+                android:enabled="true"
+                style="@style/AudioUploadMask"
+                android:layout_centerHorizontal="true"
+                android:alpha="1.0"
+                android:text="Hypnosis Audio 05"
+                android:textColor="@color/white" />
+
+            <Button
+                style="@style/AudioUploadMask"
+                android:layout_width="384.27dp"
+                android:layout_height="62.37dp"
+                android:layout_centerHorizontal="true"
+                android:layout_marginStart="13.365dp"
+                android:layout_marginTop="13.365dp"
+                android:layout_marginEnd="13.365dp"
+                android:alpha="1.0"
+                android:enabled="true"
+                android:text="Hypnosis Audio 06"
+                android:textColor="@color/white" />
+
+            <Button
+                android:layout_width="384.27dp"
+                android:layout_height="62.37dp"
+                android:layout_marginTop="13.365dp"
+                android:layout_marginStart="13.365dp"
+                android:layout_marginEnd="13.365dp"
+                android:enabled="true"
+                style="@style/AudioUploadMask"
+                android:layout_centerHorizontal="true"
+                android:alpha="1.0"
+                android:text="Hypnosis Audio 07"
+                android:textColor="@color/white" />
+            <Button
+                android:layout_width="384.27dp"
+                android:layout_height="62.37dp"
+                android:layout_marginTop="13.365dp"
+                android:layout_marginStart="13.365dp"
+                android:layout_marginEnd="13.365dp"
+                android:enabled="true"
+                style="@style/AudioUploadMask"
+                android:layout_centerHorizontal="true"
+                android:alpha="1.0"
+                android:text="Hypnosis Audio 08"
+                android:textColor="@color/white" />
+            <Button
+                android:layout_width="384.27dp"
+                android:layout_height="62.37dp"
+                android:layout_marginTop="13.365dp"
+                android:layout_marginStart="13.365dp"
+                android:layout_marginEnd="13.365dp"
+                android:enabled="true"
+                style="@style/AudioUploadMask"
+                android:layout_centerHorizontal="true"
+                android:alpha="1.0"
+                android:text="Hypnosis Audio 09"
+                android:textColor="@color/white" />
+            <Button
+                android:layout_width="384.27dp"
+                android:layout_height="62.37dp"
+                android:layout_marginTop="13.365dp"
+                android:layout_marginStart="13.365dp"
+                android:layout_marginEnd="13.365dp"
+                android:enabled="true"
+                style="@style/AudioUploadMask"
+                android:layout_centerHorizontal="true"
+                android:alpha="1.0"
+                android:text="Hypnosis Audio 10"
+                android:textColor="@color/white" />
+            <Button
+                android:layout_width="384.27dp"
+                android:layout_height="62.37dp"
+                android:layout_marginTop="13.365dp"
+                android:layout_marginStart="13.365dp"
+                android:layout_marginEnd="13.365dp"
+                android:enabled="true"
+                style="@style/AudioUploadMask"
+                android:layout_centerHorizontal="true"
+                android:alpha="1.0"
+                android:text="Hypnosis Audio 11"
+                android:textColor="@color/white" />
+            <Button
+                android:layout_width="384.27dp"
+                android:layout_height="62.37dp"
+                android:layout_marginTop="13.365dp"
+                android:layout_marginStart="13.365dp"
+                android:layout_marginEnd="13.365dp"
+                android:enabled="true"
+                style="@style/AudioUploadMask"
+                android:layout_centerHorizontal="true"
+                android:alpha="1.0"
+                android:text="Hypnosis Audio 12"
+                android:textColor="@color/white" />
+        </LinearLayout>
+    </ScrollView>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/MainPage_MenuMask"
+        android:layout_width="393.18dp"
+        android:layout_height="129.195dp"
+        android:layout_marginStart="8.91dp"
+        android:layout_marginTop="752.895dp"
+        android:alpha="1.0"
+        style="@style/MenuMask">
+
+        <ImageView
+            android:id="@+id/MainPage_MenuButton1"
+            android:layout_width="75dp"
+            android:layout_height="75dp"
+            android:layout_marginStart="41.49375dp"
+            android:layout_marginTop="16.929dp"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            android:background="@android:color/transparent"
+            android:clickable="false"
+            android:src="@drawable/cd_logo_02" />
+
+        <ImageView
+            android:id="@+id/MainPage_MenuButton2"
+            android:layout_width="75dp"
+            android:layout_height="75dp"
+            android:layout_marginStart="41.49375dp"
+            android:layout_marginTop="16.929dp"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/MainPage_MenuButton1"
+            android:clickable="false"
+            android:background="@null"
+            android:src="@drawable/account_logo_01"/>
+
+        <ImageView
+            android:id="@+id/MainPage_MenuButton3"
+            android:layout_width="75dp"
+            android:layout_height="75dp"
+            android:layout_marginStart="41.49375dp"
+            android:layout_marginTop="16.929dp"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/MainPage_MenuButton2"
+            android:clickable="false"
+            android:background="@null"
+            android:src="@drawable/book_logo_01"/>
+
+        <TextView
+            android:id="@+id/MainPage_MenuText1"
+            android:layout_width="75dp"
+            android:layout_height="wrap_content"
+            app:layout_constraintTop_toBottomOf="@+id/MainPage_MenuButton1"
+            app:layout_constraintStart_toStartOf="@+id/MainPage_MenuButton1"
+            android:text="@string/text_MainMenu_audio"
+            android:fontFamily="@font/font_formal"
+            android:textSize="19sp"
+            android:textStyle="bold"
+            android:textAlignment="center"
+            android:textColor="@color/menu_cyan"/>
+        <TextView
+            android:id="@+id/MainPage_MenuText2"
+            android:layout_width="75dp"
+            android:layout_height="wrap_content"
+            app:layout_constraintTop_toBottomOf="@+id/MainPage_MenuButton2"
+            app:layout_constraintStart_toStartOf="@+id/MainPage_MenuButton2"
+            android:text="@string/text_MainMenu_account"
+            android:textSize="19sp"
+            android:fontFamily="@font/font_formal"
+            android:textStyle="bold"
+            android:textAlignment="center"
+            android:textColor="@color/white"/>
+        <TextView
+            android:id="@+id/MainPage_MenuText3"
+            android:layout_width="75dp"
+            android:layout_height="wrap_content"
+            app:layout_constraintTop_toBottomOf="@+id/MainPage_MenuButton3"
+            app:layout_constraintStart_toStartOf="@+id/MainPage_MenuButton3"
+            android:text="@string/text_MainMenu_tutorial"
+            android:textSize="19sp"
+            android:fontFamily="@font/font_formal"
+            android:textStyle="bold"
+            android:textAlignment="center"
+            android:textColor="@color/white"/>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <ImageView
+        android:id="@+id/init_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/shadow_background"
+        tools:ignore="ContentDescription"
+        >
+    </ImageView>
+
+    <RelativeLayout
+        android:id="@+id/audio_board"
+        android:layout_width="384.27dp"
+        android:layout_height="267.3dp"
+        android:layout_marginStart="13.365dp"
+        android:layout_marginTop="311.85dp"
+        android:background="@drawable/audio_board"
+        tools:ignore="ContentDescription"
+        >
+        <TextView
+            android:layout_width="307.395dp"
+            android:layout_height="80.19dp"
+            android:layout_marginTop="26.73dp"
+            android:layout_centerHorizontal="true"
+            android:gravity="center"
+            android:text="AAAAAAAAAAAAAAAAAAAAAAAAAA"
+            android:textStyle="bold"
+            android:fontFamily="@font/font_burgela"
+            android:textColor="@color/audioBoardTextColor"
+            android:textSize="32.999967sp"
+            />
+        <SeekBar
+            android:id="@+id/music_progress_bar"
+            android:layout_width="338.58dp"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:layout_marginTop="124.74dp"
+            />
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="338.58dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="151.47dp"
+            android:layout_centerHorizontal="true">
+            <TextView
+                android:id="@+id/audio_board_time_start"
+                android:layout_width="80.19dp"
+                android:layout_height="24.999678dp"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                android:gravity="center"
+                android:text="00:00:00"
+                android:textStyle="bold"
+                android:fontFamily="@font/font_formal"
+                android:textColor="@color/audioBoardTextColor"
+                android:textSize="17.82sp"
+                />
+            <TextView
+                android:id="@+id/audio_board_time_end"
+                android:layout_width="80.19dp"
+                android:layout_height="24.999678dp"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                android:gravity="center"
+                android:text="10:50:45"
+                android:textStyle="bold"
+                android:fontFamily="@font/font_formal"
+                android:textColor="@color/audioBoardTextColor"
+                android:textSize="17.82sp"
+                />
+        </androidx.constraintlayout.widget.ConstraintLayout>
+        <Button
+            android:id="@+id/audio_board_control_button"
+            android:layout_width="41.877dp"
+            android:layout_height="41.877dp"
+            android:layout_marginStart="43.3524dp"
+            android:layout_marginTop="189.783dp"
+            android:background="@drawable/ic_audio_board_button_play"
+            />
+        <Button
+            android:id="@+id/audio_board_description"
+            android:layout_width="41.877dp"
+            android:layout_height="41.877dp"
+            android:layout_marginStart="128.5818dp"
+            android:layout_marginTop="189.783dp"
+            android:background="@drawable/ic_audio_board_button_description"
+            />
+        <Button
+            android:id="@+id/audio_board_delete"
+            android:layout_width="41.877dp"
+            android:layout_height="41.877dp"
+            android:layout_marginStart="213.8112dp"
+            android:layout_marginTop="189.783dp"
+            android:background="@drawable/ic_audio_board_button_delete"
+            />
+        <Button
+            android:id="@+id/audio_board_back"
+            android:layout_width="41.877dp"
+            android:layout_height="41.877dp"
+            android:layout_marginStart="299.0406dp"
+            android:layout_marginTop="189.783dp"
+            android:background="@drawable/ic_audio_board_button_return"
+            />
+    </RelativeLayout>
+
+</RelativeLayout>

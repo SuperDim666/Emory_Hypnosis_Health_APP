@@ -1,0 +1,19 @@
+<resources>
+    <string name="app_name">Emory Hypnosis Health</string>
+    <string name="emory_logo">SignInControl_emory_logo</string>
+    <string name="signIn_buttonText">SIGN  IN</string>
+    <string name="text_signInSwitchDoctor">Doctor account? <b>Sign in here</b></string>
+    <string name="text_signInSwitchPatient">Patient account? <b>Sign in here</b></string>
+    <string name="text_usernameDoctor">Doctor ID</string>
+    <string name="text_usernamePatient">Patient ID</string>
+    <string name="text_password">Password</string>
+    <string name="text_confirmPassword">Confirm Password</string>
+    <string name="text_register">SIGN UP</string>
+    <string name="text_back">BACK</string>
+    <string name="text_menuServices">MenuServices</string>
+    <string name="action_settings">Settings</string>
+    <string name="text_MainMenu_account">Account</string>
+    <string name="text_MainMenu_tutorial">Tutorial</string>
+    <string name="text_MainMenu_audio">Audio</string>
+    <string name="text_MainMenu_upload">UPLOAD AUDIO</string>
+</resources>
