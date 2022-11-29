@@ -151,6 +151,9 @@ public class SignInControl extends AppCompatActivity {
                     Map.Entry<String, String[]> userDataPair = userDataItr.next();
                     if (userDataPair.getKey().equals(currUserID) &&
                         userDataPair.getValue()[0].equals(currPassword)) {
+                        this.currUserID = currUserID;
+                        this.currPassword = currPassword;
+                        this.currUserHashCode = userDataPair.getValue()[1];
                         match = true;
                         break;
                     }

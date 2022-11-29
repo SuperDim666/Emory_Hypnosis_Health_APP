@@ -855,49 +855,50 @@ public class MainMenu extends AppCompatActivity {
             if (audioMap == null) {
                 audioMap = new HashMap<>();
                 audio_recordList_ButtonList = new LinkedList<>();
-                try {
-                    File folder = new File(getFilesDir().toString() +
-                            "/emory_health/data/audio_records/" + security.encrypt(currUserHashCode));
-                    if (!folder.exists()) {
-                        folder.mkdirs();
-                    }
-                    String currAudioDir = folder.toString();
-                    File audioFile = new File(currAudioDir, "audio_data.emory");
-                    if (audioFile.exists()) {
-                        Scanner audioDataIn = new Scanner(audioFile);
-                        int index = 0;
-                        String[] data = new String[3];
-                        while (audioDataIn.hasNextLine()) {
+            }
+            try {
+                File folder = new File(getFilesDir().toString() +
+                        "/emory_health/data/audio_records/" + security.encrypt(currUserHashCode));
+                if (!folder.exists()) {
+                    folder.mkdirs();
+                }
+                String currAudioDir = folder.toString();
+                File audioFile = new File(currAudioDir, "audio_data.emory");
+                if (audioFile.exists()) {
+                    Scanner audioDataIn = new Scanner(audioFile);
+                    int index = 0;
+                    String[] data = new String[3];
+                    while (audioDataIn.hasNextLine()) {
 
-                            // data[0] = filename
-                            // data[1] = title
-                            // data[2] = description file name
-                            data[index++] = audioDataIn.nextLine();
-                            if (index == 3) {
-                                index = 0;
-                                try {
-                                    String audioFileName = security.decrypt(data[0]);
-                                    String audioTitle = security.decrypt(data[1]);
-                                    File descriptionFile = new File(currAudioDir, data[2]);
-                                    StringBuilder description = new StringBuilder();
-                                    if (descriptionFile.exists()) {
-                                        Scanner descriptionIn = new Scanner(descriptionFile);
-                                        while (descriptionIn.hasNextLine()) {
-                                            description.append(security.decrypt(descriptionIn.nextLine())).append('\n');
-                                        }
-                                    } else {
-                                        try {
-                                            boolean createSuccess = descriptionFile.createNewFile();
-                                            if (!createSuccess) {
-                                                System.err.println("Create file failed");
-                                                System.exit(-1);
-                                            }
-                                        } catch (IOException e) {
-                                            e.printStackTrace();
+                        // data[0] = filename
+                        // data[1] = title
+                        // data[2] = description file name
+                        data[index++] = audioDataIn.nextLine();
+                        if (index == 3) {
+                            index = 0;
+                            try {
+                                String audioFileName = security.decrypt(data[0]);
+                                String audioTitle = security.decrypt(data[1]);
+                                File descriptionFile = new File(currAudioDir, data[2]);
+                                StringBuilder description = new StringBuilder();
+                                if (descriptionFile.exists()) {
+                                    Scanner descriptionIn = new Scanner(descriptionFile);
+                                    while (descriptionIn.hasNextLine()) {
+                                        description.append(security.decrypt(descriptionIn.nextLine())).append('\n');
+                                    }
+                                } else {
+                                    try {
+                                        boolean createSuccess = descriptionFile.createNewFile();
+                                        if (!createSuccess) {
+                                            System.err.println("Create file failed");
                                             System.exit(-1);
                                         }
+                                    } catch (IOException e) {
+                                        e.printStackTrace();
+                                        System.exit(-1);
                                     }
-
+                                }
+                                if (!audioMap.containsKey(audioFileName)) {
                                     ContextThemeWrapper newContext = new ContextThemeWrapper(MainMenu.this, R.style.AudioButtonMask);
                                     Button newAudioButton = new Button(newContext, null, R.style.AudioButtonMask);
                                     newAudioButton.setId(View.generateViewId());
@@ -915,31 +916,31 @@ public class MainMenu extends AppCompatActivity {
                                     newAudioButton.setTag(R.id.audio_entry_filename, audioFileName);
                                     newAudioButton.setOnClickListener(playAudio -> audio_play((String) newAudioButton.getTag(R.id.audio_entry_filename)));
                                     audio_recordList_ButtonList.add(newAudioButton);
-                                    this.audioMap.put(audioFileName, new String[]{audioTitle, description.toString()});
                                     audio_recordList.addView(newAudioButton);
-                                } catch (Exception e) {
-
-                                    // Error: 0xCD136E
-                                    System.err.println("Error 0xCD136E: cannot read/decrypt audio data from doctor's audio directory!");
-                                    System.exit(-1);
                                 }
-                            }
-                        }
-                    } else {
-                        try {
-                            boolean createSuccess = audioFile.createNewFile();
-                            if (!createSuccess) {
-                                System.err.println("Create file failed");
+                                this.audioMap.put(audioFileName, new String[]{audioTitle, description.toString()});
+                            } catch (Exception e) {
+
+                                // Error: 0xCD136E
+                                System.err.println("Error 0xCD136E: cannot read/decrypt audio data from doctor's audio directory!");
                                 System.exit(-1);
                             }
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                            System.exit(-1);
                         }
                     }
-                } catch (Exception e) {
-                    e.printStackTrace();
+                } else {
+                    try {
+                        boolean createSuccess = audioFile.createNewFile();
+                        if (!createSuccess) {
+                            System.err.println("Create file failed");
+                            System.exit(-1);
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        System.exit(-1);
+                    }
                 }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
 
             base.addView(audio_uploadButton);
