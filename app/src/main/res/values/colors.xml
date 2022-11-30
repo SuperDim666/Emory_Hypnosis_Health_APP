@@ -15,4 +15,6 @@
     <color name="buttonAudioButtonTextColor">#87CFFF</color>
     <color name="audioBoardTextColor">#023454</color>
     <color name="audioBoardOriginalColor">#2D96DB</color>
+    <color name="inputTextWhite">#E9E9E9</color>
+    <color name="inputTextHintWhite">#546E7A</color>
 </resources>

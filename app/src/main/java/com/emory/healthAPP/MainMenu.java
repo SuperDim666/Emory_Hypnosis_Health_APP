@@ -13,6 +13,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.graphics.Color;
 import android.graphics.Typeface;
 import android.media.MediaPlayer;
 import android.net.Uri;
@@ -23,15 +24,19 @@ import android.os.Handler;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.provider.OpenableColumns;
+import android.text.InputType;
 import android.text.TextUtils;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.ContextThemeWrapper;
 import android.view.Gravity;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.view.inputmethod.EditorInfo;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
@@ -44,11 +49,14 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.cardview.widget.CardView;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.constraintlayout.widget.ConstraintSet;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.res.ResourcesCompat;
+
+import com.google.android.material.textfield.TextInputLayout;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -59,12 +67,16 @@ import java.io.InputStream;
 import java.nio.channels.FileChannel;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.Random;
 import java.util.Scanner;
 import java.util.Timer;
 import java.util.TimerTask;
 
 public class MainMenu extends AppCompatActivity {
+
+    private HashMap<String, String[]> patientData;
+    private HashMap<String, String[]> doctorData;
 
     private final int REQUEST_CODE_EXTERNAL_FILE = 1099;
     private RelativeLayout ground, ground_base, base, base02, baseFinal;
@@ -73,6 +85,7 @@ public class MainMenu extends AppCompatActivity {
     private boolean isDoctor;
     private ConvPDS PDS;
     private DataSecurity security;
+    private DataSecurity securityOriginal;
     private Random rand;
     private AnimatorSet animatorSet;
     private int localSearchChoice;
@@ -126,14 +139,16 @@ public class MainMenu extends AppCompatActivity {
         baseFinal = findViewById(R.id.MainPage_BaseFinal);
 
         rand = new Random();
+
+        if (currUserID == null) inherit();
         try {
-            security = new DataSecurity();
+            // user's hash code to en/decrypt user's own data to increase user's data security
+            security = new DataSecurity(currUserHashCode);
+            securityOriginal = new DataSecurity();
         } catch (Exception e) {
             e.printStackTrace();
             System.exit(-1);
         }
-
-        if (currUserID == null) inherit();
 
         DisplayMetrics displayMetrics = new DisplayMetrics();
         getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
@@ -214,7 +229,7 @@ public class MainMenu extends AppCompatActivity {
             case 1:
                 // Digits
                 max = 57;
-                min = 49;
+                min = 48;
                 break;
             case 2:
                 // Lower Case English Letter
@@ -231,13 +246,54 @@ public class MainMenu extends AppCompatActivity {
         }
         return (char) (rand.nextInt((max - min) + 1) + min);
     }
+    private boolean containsUserHashCode(String hashCode, boolean doctor) {
+        if (doctor)
+            for (Map.Entry<String, String[]> doctorPair : doctorData.entrySet())
+                if (doctorPair.getValue()[1].equals(hashCode))
+                    return true;
+        else
+            for (Map.Entry<String, String[]> patientPair : patientData.entrySet())
+                if (patientPair.getValue()[1].equals(hashCode))
+                    return true;
+        return false;
+    }
+    private String[] randomCreateUser (String str1, String str2, String str3,
+                                       int pre1, int pre2, int pre3, int xLength, boolean doctor) {
+        rand = new Random();
+        StringBuilder currUserIDBuilder = new StringBuilder (str1);
+        StringBuilder  currPasswordBuilder = new StringBuilder (str2);
+        StringBuilder  currUserHashCodeBuilder = new StringBuilder (str3);
+        String currUserID;
+        String currPassword;
+        String currUserHashCode;
+        boolean check;
+        do {
+            for (int i = 0; i < xLength; i++) {
+                currUserIDBuilder.setCharAt(i + pre1, randomChar(3));
+                currPasswordBuilder.setCharAt(i + pre2, randomChar(4));
+                currUserHashCodeBuilder.setCharAt(i + pre3, randomChar(4));
+            }
+            currUserID = currUserIDBuilder.toString();
+            currPassword = currPasswordBuilder.toString();
+            currUserHashCode = currUserHashCodeBuilder.toString();
+            if (doctor) {
+                check = doctorData.containsKey(currUserID) || containsUserHashCode(currUserHashCode, doctor);
+            } else {
+                check = patientData.containsKey(currUserID) || containsUserHashCode(currUserHashCode, doctor);
+            }
+        } while (check);
+        return new String[] {currUserID, currPassword, currUserHashCode};
+    }
     private void inherit() {
         Intent intent = getIntent();
         currUserID = intent.getStringExtra("com.emory.healthAPP.currUserID");
         currPassword = intent.getStringExtra("com.emory.healthAPP.currPassword");
         currUserHashCode = intent.getStringExtra("com.emory.healthAPP.currUserHashCode");
+        patientData = (HashMap<String, String[]>) intent.getSerializableExtra("com.emory.healthAPP.patientData");
+        doctorData = (HashMap<String, String[]>) intent.getSerializableExtra("com.emory.healthAPP.doctorData");
+        currUserHashCode = intent.getStringExtra("com.emory.healthAPP.currUserHashCode");
         isDoctor = intent.getBooleanExtra("com.emory.healthAPP.isDoctor", false);
-        if (currPassword == null || currUserID == null) {
+        if (currPassword == null || currUserID == null || patientData == null || doctorData == null) {
             System.err.println("Error 0x91DAAC: cannot derive sign-in data from sign-in page.");
             System.exit(-1);
         }
@@ -264,10 +320,12 @@ public class MainMenu extends AppCompatActivity {
             baseFinal.setPadding(0, statusBarHeight, 0, 0);
         }
     }
-
-
-
-
+    private void warningMsg(final String msg, final String title) {
+        builder.setMessage(msg);
+        builder.setTitle(title);
+        builder.setPositiveButton("OK", (dialog, id) -> {});
+        builder.show();
+    }
 
     private boolean fileExists(String filePath) {
         File file = new File(filePath);
@@ -353,8 +411,9 @@ public class MainMenu extends AppCompatActivity {
         File output;
         if(!newDirName.equals("")) {
             File dir = new File(MainMenu.this.getFilesDir() + "/" + newDirName);
-            if (!dir.exists()) {
-                dir.mkdir();
+            if (!dir.exists() && !dir.mkdir()) {
+                System.err.println("Error 0x0001B: create assigned directory failed.");
+                System.exit(-1);
             }
             output = new File(MainMenu.this.getFilesDir() + "/" + newDirName + "/" + name);
         }
@@ -590,6 +649,12 @@ public class MainMenu extends AppCompatActivity {
 
     private class DoctorPage {
 
+        private final int AUDIO_PAGE = 1;
+        private final int ACCOUNT_PAGE = 2;
+        private final int TUTORIAL_PAGE = 3;
+
+        //------------------------------------------------------------------------------------------
+
         private RelativeLayout.LayoutParams relativeLayoutParams;
         private RelativeLayout.MarginLayoutParams relativeMarginParams;
         private ConstraintLayout.LayoutParams constraintLayoutParams;
@@ -607,7 +672,6 @@ public class MainMenu extends AppCompatActivity {
         private TextView menuText01, menuText02, menuText03;
         private HashMap<String, String[]> audioMap; // map filename -> (title, description)
         private LinkedList<Button> audio_recordList_ButtonList;
-
         // Media Player settings
         private MediaPlayer currMedia;     // current media being played
         private ImageView backgroundShadow;
@@ -621,10 +685,35 @@ public class MainMenu extends AppCompatActivity {
         private Button playButton, descriptButton, deleteButton, returnButton;
         private String strTitle, currDescription;
 
+        //------------------------------------------------------------------------------------------
+        // Account page
+        private RelativeLayout showIDLayout;
+        private TextView showIDView;
+        private HashMap<String, String> patientMapping;
+        private ScrollView account_scrollView;
+        private LinearLayout account_buttonList;
+        private Button changeUserIDButton, changePasswordButton, registerButton, showListButton;
+        // Change
+        private ConstraintLayout accountChangeMask;
+        private CardView accountCardView;
+        private TextInputLayout accountInnerCardView;
+        private EditText accountCardViewText;
+        private RelativeLayout accountChangePadding01;
+        private Button changeConfirmButton, changeBackButton;
+        private int accountChangeRequestCode;
+        // Patient List
+        private ConstraintLayout patientListBase;
+        private ScrollView patientListScroll;
+        private LinearLayout patientListLayout;
+        private RelativeLayout patientListButtonMask;
+        private Button patientListButton;
+
         private int currPageNum;
+
 
         private void doctorPage() {
             System.err.println("1");
+            pathCheck();
             currPageNum = 0;
             initialized = false;
             audioMap = null;
@@ -782,13 +871,11 @@ public class MainMenu extends AppCompatActivity {
             audio_uploadButton.setId(View.generateViewId());
             audio_scrollView.setId(View.generateViewId());
             audio_recordList.setId(View.generateViewId());
-
             // set each elements
             relativeLayoutParams = new RelativeLayout.LayoutParams(
                     PDS.i_dp2px(PDS.getWidth() - PDS.getHeight() * 0.03f),
                     PDS.i_dp2px(PDS.getHeight() * 0.07f)
             );
-            System.err.println("13");
             relativeLayoutParams.topMargin = PDS.i_dp2px(PDS.getHeight() * 0.015f);
             relativeLayoutParams.leftMargin = PDS.i_dp2px(PDS.getHeight() * 0.015f);
             relativeLayoutParams.addRule(RelativeLayout.CENTER_HORIZONTAL);
@@ -811,8 +898,6 @@ public class MainMenu extends AppCompatActivity {
                     audio_upload01();
                 }
             });
-            System.err.println("14");
-
             relativeLayoutParams = new RelativeLayout.LayoutParams(
                     RelativeLayout.LayoutParams.MATCH_PARENT,
                     PDS.i_dp2px(PDS.getHeight() * (7.0f / 8.0f - 0.14f))
@@ -820,7 +905,6 @@ public class MainMenu extends AppCompatActivity {
             relativeLayoutParams.topMargin = PDS.i_dp2px(PDS.getHeight() * 0.1f);
             audio_scrollView.setLayoutParams(relativeLayoutParams);
             audio_scrollView.setEnabled(false);
-            System.err.println("15");
 
             linearLayoutParams = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
@@ -829,18 +913,164 @@ public class MainMenu extends AppCompatActivity {
             audio_recordList.setLayoutParams(linearLayoutParams);
             audio_recordList.setOrientation(LinearLayout.VERTICAL);
             audio_recordList.setEnabled(false);
+            audio_scrollView.addView(audio_recordList);
             System.err.println("16");
+
+            // -------------------------------------------------------------------------------------
+            // initializations of account page items
+            loadPatientList();
+            showIDLayout = new RelativeLayout(MainMenu.this);
+            showIDLayout.setId(View.generateViewId());
+            showIDView = new TextView(MainMenu.this);
+            showIDView.setId(View.generateViewId());
+            account_scrollView = new ScrollView(MainMenu.this);
+            account_buttonList = new LinearLayout(MainMenu.this);
+            newContext = new ContextThemeWrapper(MainMenu.this, R.style.AccountButtonChangeUserID);
+            changeUserIDButton = new Button(newContext, null, R.style.AccountButtonChangeUserID);
+            newContext = new ContextThemeWrapper(MainMenu.this, R.style.AccountButtonChangePassword);
+            changePasswordButton = new Button(newContext, null, R.style.AccountButtonChangePassword);
+            newContext = new ContextThemeWrapper(MainMenu.this, R.style.AccountButtonRegisterNewPatient);
+            registerButton = new Button(newContext, null, R.style.AccountButtonRegisterNewPatient);
+            newContext = new ContextThemeWrapper(MainMenu.this, R.style.AccountButtonShowPatientList);
+            showListButton = new Button(newContext, null, R.style.AccountButtonShowPatientList);
+            changeUserIDButton.setId(View.generateViewId());
+            changePasswordButton.setId(View.generateViewId());
+            registerButton.setId(View.generateViewId());
+            showListButton.setId(View.generateViewId());
+
+            relativeLayoutParams = new RelativeLayout.LayoutParams(
+                    PDS.i_dp2px(PDS.getWidth() - PDS.getHeight() * 0.03f),
+                    PDS.i_dp2px(PDS.getHeight() * 0.07f)
+            );
+            relativeLayoutParams.topMargin = PDS.i_dp2px(PDS.getHeight() * 0.015f);
+            relativeLayoutParams.leftMargin = PDS.i_dp2px(PDS.getHeight() * 0.015f);
+            relativeLayoutParams.addRule(RelativeLayout.CENTER_HORIZONTAL);
+            showIDLayout.setLayoutParams(relativeLayoutParams);
+            relativeLayoutParams = new RelativeLayout.LayoutParams(
+                    RelativeLayout.LayoutParams.MATCH_PARENT,
+                    RelativeLayout.LayoutParams.WRAP_CONTENT
+            );
+            relativeLayoutParams.addRule(RelativeLayout.CENTER_VERTICAL);
+            showIDView.setLayoutParams(relativeLayoutParams);
+            showIDView.setTypeface(ResourcesCompat.getFont(MainMenu.this, R.font.font_burgela_bold), Typeface.NORMAL);
+            showIDView.setText("Doctor ID:\n" + currUserID);
+            showIDView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, PDS.getWidth() * 0.0486618004866f);
+            showIDView.setTextColor(MainMenu.this.getResources().getColor(R.color.white));
+            showIDLayout.addView(showIDView);
+
+            relativeLayoutParams = new RelativeLayout.LayoutParams(
+                    RelativeLayout.LayoutParams.MATCH_PARENT,
+                    PDS.i_dp2px(PDS.getHeight() * (7.0f / 8.0f - 0.14f))
+            );
+            relativeLayoutParams.topMargin = PDS.i_dp2px(PDS.getHeight() * 0.10f);
+            account_scrollView.setId(View.generateViewId());
+            account_scrollView.setLayoutParams(relativeLayoutParams);
+            account_scrollView.setEnabled(true);
+            linearLayoutParams = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.MATCH_PARENT
+            );
+            account_buttonList.setId(View.generateViewId());
+            account_buttonList.setLayoutParams(linearLayoutParams);
+            account_buttonList.setOrientation(LinearLayout.VERTICAL);
+            account_buttonList.setEnabled(true);
+            account_scrollView.addView(account_buttonList);
+
+            linearLayoutParams = new LinearLayout.LayoutParams(
+                    PDS.i_dp2px(PDS.getWidth() * 0.934963503649635f),
+                    PDS.i_dp2px(PDS.getHeight() * 0.07f)
+            );
+            linearLayoutParams.leftMargin = PDS.i_dp2px(PDS.getWidth() * 0.0325182481751825f);
+            linearLayoutParams.topMargin = PDS.i_dp2px(PDS.getHeight() * 0.030303030303f);
+            changeUserIDButton.setLayoutParams(linearLayoutParams);
+            changeUserIDButton.setEnabled(true);
+            changeUserIDButton.setClickable(true);
+            changeUserIDButton.setText("Change Doctor ID");
+            changeUserIDButton.setTextColor(MainMenu.this.getResources().getColor(R.color.white));
+            changePasswordButton.setLayoutParams(linearLayoutParams);
+            changePasswordButton.setEnabled(true);
+            changePasswordButton.setClickable(true);
+            changePasswordButton.setText("Change Password");
+            changePasswordButton.setTextColor(MainMenu.this.getResources().getColor(R.color.white));
+            registerButton.setLayoutParams(linearLayoutParams);
+            registerButton.setEnabled(true);
+            registerButton.setClickable(true);
+            registerButton.setText("Register New Patient");
+            registerButton.setTextColor(MainMenu.this.getResources().getColor(R.color.white));
+            showListButton.setLayoutParams(linearLayoutParams);
+            showListButton.setEnabled(true);
+            showListButton.setClickable(true);
+            showListButton.setText("Show your Patient List");
+            showListButton.setTextColor(MainMenu.this.getResources().getColor(R.color.white));
+
+
+            changeUserIDButton.setOnClickListener(changeUserID -> {
+                accountChangeRequestCode = 1;
+                accountChangePageInit();
+            });
+            changePasswordButton.setOnClickListener(changePassword -> {
+                accountChangeRequestCode = 2;
+                accountChangePageInit();
+            });
+            registerButton.setOnClickListener(registerPatient -> {
+                accountChangeRequestCode = 3;
+                accountChangePageInit();
+            });
+            showListButton.setOnClickListener(showPatientList -> patientListShow());
+
+            account_buttonList.addView(changeUserIDButton);
+            account_buttonList.addView(changePasswordButton);
+            account_buttonList.addView(showListButton);
+            account_buttonList.addView(registerButton);
 
             // default starting page
             initAudioPage();
         }
+        private void pathCheck() {
+            File folder; String path;
+            path = MainMenu.this.getFilesDir().toString() + "/emory_health";
+            folder = new File(path);
+            if (!folder.exists() && !folder.mkdirs()) {
+                System.err.println("Error 0xCCCBA1: data directory path check 01 failed.");
+                System.exit(-1);
+            }
+            path = MainMenu.this.getFilesDir().toString() + "/emory_health/data";
+            folder = new File(path);
+            if (!folder.exists() && !folder.mkdirs()) {
+                System.err.println("Error 0xCCCBA2: data directory path check 02 failed.");
+                System.exit(-1);
+            }
+            try {
+                path = MainMenu.this.getFilesDir().toString() + "/emory_health/data/" +
+                        security.encrypt(currUserHashCode);
+            } catch (Exception e) {
+                e.printStackTrace();
+                System.exit(-1);
+            }
+            folder = new File(path);
+            if (!folder.exists() && !folder.mkdirs()) {
+                System.err.println("Error 0xCCCBA3: data directory path check 03 failed.");
+                System.exit(-1);
+            }
+            try {
+                path = MainMenu.this.getFilesDir().toString() + "/emory_health/data/" +
+                        security.encrypt(currUserHashCode) + "/audio_records";
+            } catch (Exception e) {
+                e.printStackTrace();
+                System.exit(-1);
+            }
+            folder = new File(path);
+            if (!folder.exists() && !folder.mkdirs()) {
+                System.err.println("Error 0xCCCBA4: data directory path check 04 failed.");
+                System.exit(-1);
+            }
+        }
 
         private void initAudioPage() {
-            System.out.println("Enter initializing audio page");
             if (currPageNum == 1) return;
             if (currPageNum != 0) destroyCurrPage();
-            System.out.println("Start initializing audio page");
-            currPageNum = 1;  // set current page as audio page
+
+            currPageNum = AUDIO_PAGE;  // set current page as audio page
 
             // change menu pattern
             menuButton01.setImageResource(R.drawable.cd_logo_02);
@@ -852,15 +1082,18 @@ public class MainMenu extends AppCompatActivity {
 
             // read all existing audios' filenames, title & description
 
+            System.err.println("11111");
             if (audioMap == null) {
+                System.err.println("22222");
                 audioMap = new HashMap<>();
                 audio_recordList_ButtonList = new LinkedList<>();
             }
             try {
-                File folder = new File(getFilesDir().toString() +
-                        "/emory_health/data/audio_records/" + security.encrypt(currUserHashCode));
-                if (!folder.exists()) {
-                    folder.mkdirs();
+                File folder = new File(MainMenu.this.getFilesDir().toString() +
+                        "/emory_health/data/"+ security.encrypt(currUserHashCode) +"/audio_records");
+                if (!folder.exists() && !folder.mkdirs()) {
+                    System.err.println("Error 0x000C0: create audio record directory failed.");
+                    System.exit(-1);
                 }
                 String currAudioDir = folder.toString();
                 File audioFile = new File(currAudioDir, "audio_data.emory");
@@ -942,10 +1175,9 @@ public class MainMenu extends AppCompatActivity {
             } catch (Exception e) {
                 e.printStackTrace();
             }
-
+            System.err.println("444444");
             base.addView(audio_uploadButton);
             base.addView(audio_scrollView);
-            audio_scrollView.addView(audio_recordList);
             System.err.println("17");
 
             // reopen
@@ -961,9 +1193,6 @@ public class MainMenu extends AppCompatActivity {
                 menuButton02.setEnabled(true);
                 menuButton03.setEnabled(true);
                 setStatusAudioRecords(true);
-                base.addView(audio_uploadButton);
-                base.addView(audio_scrollView);
-                base.addView(audio_recordList);
             } else {
                 initialized = true;
                 Handler handler = new Handler();
@@ -973,10 +1202,11 @@ public class MainMenu extends AppCompatActivity {
         private void audio_upload01() {
             try {
                 System.err.println("upload00");
-                File folder = new File(getFilesDir().toString() +
-                        "/emory_health/data/audio_records/" + security.encrypt(currUserHashCode));
-                if (!folder.exists()) {
-                    folder.mkdirs();
+                File folder = new File(MainMenu.this.getFilesDir().toString() +
+                        "/emory_health/data/"+ security.encrypt(currUserHashCode) +"/audio_records");
+                if (!folder.exists() && !folder.mkdirs()) {
+                    System.err.println("Error 0xAAAAB0: create audio record directory failed");
+                    System.exit(-1);
                 }
                 System.err.println("upload01");
                 Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
@@ -1003,8 +1233,8 @@ public class MainMenu extends AppCompatActivity {
                 System.err.println("filename: " + filename);
                 String extension = filename.substring(filename.lastIndexOf("."));
                 filename = security.encrypt(filename) + extension;
-                String currAudioPath = getFilesDir().toString() +
-                        "/emory_health/data/audio_records/" + security.encrypt(currUserHashCode) + "/" + filename;
+                String currAudioPath = MainMenu.this.getFilesDir().toString() +
+                        "/emory_health/data/" + security.encrypt(currUserHashCode) +"/audio_records/" + filename;
                 File src = new File(path);
                 if (!src.exists()) {
                     builder.setMessage("Please assign an existing file to upload.")
@@ -1029,7 +1259,6 @@ public class MainMenu extends AppCompatActivity {
                 System.exit(-1);
             }
         }
-
         private void audio_play(String filename) {
             if (!audioMap.containsKey(filename)) {
                 System.err.println("Error 0001EF: cannot find key(filename) in audio map!");
@@ -1038,8 +1267,8 @@ public class MainMenu extends AppCompatActivity {
             currMedia = new MediaPlayer();
             isPlaying = false;
             try {
-                File audioSrc = new File(getFilesDir().toString() +
-                        "/emory_health/data/audio_records/" + security.encrypt(currUserHashCode) + "/", filename);
+                File audioSrc = new File(MainMenu.this.getFilesDir().toString() +
+                        "/emory_health/data/" + security.encrypt(currUserHashCode) + "/audio_records", filename);
                 System.err.println("MUSIC_PATH_DEBUG: " + audioSrc.getPath());
                 currMedia.setDataSource(audioSrc.getPath());   // assign path of audio
                 currMedia.prepare();  // prepare media
@@ -1086,7 +1315,7 @@ public class MainMenu extends AppCompatActivity {
             relativeLayoutParams.leftMargin = PDS.i_dp2px(PDS.getHeight() * 0.015f);
             audioBoard.setId(View.generateViewId());
             audioBoard.setLayoutParams(relativeLayoutParams);
-            audioBoard.setBackground(ContextCompat.getDrawable(MainMenu.this, R.drawable.audio_board));
+            audioBoard.setBackground(ContextCompat.getDrawable(MainMenu.this, R.drawable.main_page_blue_board));
             base02.addView(audioBoard);
 
 
@@ -1245,7 +1474,6 @@ public class MainMenu extends AppCompatActivity {
             returnButton.setOnClickListener(returnToAudioMain -> audioPlayReturn());
             audioMainToMediaAnimation();
         }
-
         private String transferSecToStr(int secs) {
             StringBuilder str = new StringBuilder("00:00:00");
             int hours = secs / 3600;
@@ -1260,7 +1488,6 @@ public class MainMenu extends AppCompatActivity {
             str.setCharAt(7, (char) ((secs % 10) + 48));
             return str.toString();
         }
-
         private void audioPlayPauseControl() {
             if (isPlaying) {
                 isPlaying = false;
@@ -1316,14 +1543,12 @@ public class MainMenu extends AppCompatActivity {
                 mediaToAudioMainAnimation();
             }
         }
-
         private void setStatusAudioRecords(boolean isEnabled) {
             for (Button currBtn : audio_recordList_ButtonList) {
                 currBtn.setEnabled(isEnabled);
                 currBtn.setClickable(isEnabled);
             }
         }
-
         private void writeCheckAudioData(String fullName) {
             System.err.println("audio_init_flag: 02");
             StringBuilder nameBuilder = new StringBuilder("e");
@@ -1342,7 +1567,7 @@ public class MainMenu extends AppCompatActivity {
             try {
                 File file;
                 file = new File(getFilesDir().toString() +
-                        "/emory_health/data/audio_records/" + security.encrypt(currUserHashCode),
+                        "/emory_health/data/" + security.encrypt(currUserHashCode) + "/audio_records",
                         newDescriptionName);
                 System.err.println("audio_init_flag: 05");
                 if (!file.exists()) {
@@ -1359,7 +1584,7 @@ public class MainMenu extends AppCompatActivity {
                 }
                 System.err.println("audio_init_flag: 07");
                 file = new File(getFilesDir().toString() +
-                        "/emory_health/data/audio_records/" + security.encrypt(currUserHashCode),
+                        "/emory_health/data/" + security.encrypt(currUserHashCode) + "/audio_records",
                         "audio_data.emory");
                 System.err.println("audio_init_flag: 08");
                 if (!file.exists()) {
@@ -1420,9 +1645,546 @@ public class MainMenu extends AppCompatActivity {
             }
         }
 
+
+
         private void initAccountPage() {
-            System.out.println("Enter initializing account page");
+            if (currPageNum == 2) return;
+            if (currPageNum != 0) destroyCurrPage();
+
+            currPageNum = ACCOUNT_PAGE;  // set current page as account page
+
+            // change menu pattern
+            menuButton01.setImageResource(R.drawable.cd_logo_01);
+            menuButton02.setImageResource(R.drawable.account_logo_02);
+            menuButton03.setImageResource(R.drawable.book_logo_01);
+            menuText01.setTextColor(MainMenu.this.getResources().getColor(R.color.white));
+            menuText02.setTextColor(MainMenu.this.getResources().getColor(R.color.menu_cyan));
+            menuText03.setTextColor(MainMenu.this.getResources().getColor(R.color.white));
+
+            // read all existing audios' filenames, title & description
+            base.addView(account_scrollView);
+            base.addView(showIDLayout);
+
+            menuButton01.setClickable(true);
+            menuButton01.setEnabled(true);
+            menuButton02.setClickable(true);
+            menuButton02.setEnabled(true);
+            menuButton03.setClickable(true);
+            menuButton03.setEnabled(true);
         }
+        private void loadPatientList() {
+            try {
+                String doctorPath = getFilesDir().toString() +
+                        "/emory_health/data";
+                File directoryCheck = new File (doctorPath, security.encrypt(currUserHashCode));
+                if (!directoryCheck.exists() && !directoryCheck.mkdir()) {
+                        System.err.println("Error 0xC00000: create patient list directory failed!");
+                        System.exit(-1);
+                }
+                File doctorPatientList = new File(doctorPath + "/" + security.encrypt(currUserHashCode), "patient_list.emory");
+                patientMapping = new HashMap<>();
+                if (!doctorPatientList.exists()) {
+                    if (!doctorPatientList.createNewFile()) {
+                        System.err.println("Error 0xC00001: create patient list file failed!");
+                        System.exit(-1);
+                    }
+                    return;
+                }
+                Scanner listDataIn = new Scanner(doctorPatientList);
+                while (listDataIn.hasNextLine()) {
+                    try {
+                        String curr = security.decrypt(listDataIn.nextLine());
+                        patientMapping.put(curr, patientData.get(curr)[1]);
+                        System.err.println("JDF:" + curr + "\t" + patientData.get(curr)[1]);
+                    } catch (Exception e) {
+                        System.err.println("Error 0xC00003: cannot read/decrypt patient list data!");
+                        System.exit(-1);
+                    }
+                }
+            }catch (Exception e) {
+                e.printStackTrace();
+                System.exit(-1);
+            }
+        }
+        private void accountChangePageInit() {
+            menuButton01.setEnabled(false);
+            menuButton01.setClickable(false);
+            menuButton02.setEnabled(false);
+            menuButton02.setClickable(false);
+            menuButton03.setEnabled(false);
+            menuButton03.setClickable(false);
+            changeUserIDButton.setClickable(false);
+            changeUserIDButton.setEnabled(false);
+            changePasswordButton.setClickable(false);
+            changePasswordButton.setEnabled(false);
+            registerButton.setClickable(false);
+            registerButton.setEnabled(false);
+            showListButton.setClickable(false);
+            showListButton.setEnabled(false);
+
+            backgroundShadow = new ImageView(MainMenu.this);
+            relativeLayoutParams = new RelativeLayout.LayoutParams(
+                    RelativeLayout.LayoutParams.MATCH_PARENT,
+                    RelativeLayout.LayoutParams.MATCH_PARENT
+            );
+            backgroundShadow.setId(View.generateViewId());
+            backgroundShadow.setLayoutParams(relativeLayoutParams);
+            backgroundShadow.setImageResource(R.drawable.shadow_background);
+            backgroundShadow.setAlpha(0.0f);
+            backgroundShadow.bringToFront();
+            ground.addView(backgroundShadow);
+            base02.setAlpha(0.0f);
+            base02.bringToFront();
+
+            accountChangeMask = new ConstraintLayout(MainMenu.this);
+            accountChangeMask.setId(View.generateViewId());
+            relativeLayoutParams = new RelativeLayout.LayoutParams(
+                    PDS.i_dp2px(PDS.getWidth() * 0.9349635036496f),
+                    RelativeLayout.LayoutParams.WRAP_CONTENT
+            );
+            relativeLayoutParams.leftMargin = PDS.i_dp2px(PDS.getWidth() * 0.0325182481752f);
+            relativeLayoutParams.addRule(RelativeLayout.CENTER_VERTICAL);
+            accountChangeMask.setLayoutParams(relativeLayoutParams);
+            accountChangeMask.setBackground(ContextCompat.getDrawable(MainMenu.this, R.drawable.main_page_blue_board));
+            accountChangeMask.setEnabled(false);
+            base02.addView(accountChangeMask);
+
+            int margin = PDS.i_dp2px(PDS.getWidth() * 0.0194647201946f);
+            accountCardView = new CardView(MainMenu.this);
+            accountCardView.setId(View.generateViewId());
+            constraintLayoutParams = new ConstraintLayout.LayoutParams(
+                    ConstraintLayout.LayoutParams.MATCH_PARENT,
+                    ConstraintLayout.LayoutParams.WRAP_CONTENT
+            );
+            constraintLayoutParams.bottomMargin = margin;
+            constraintLayoutParams.rightMargin = margin;
+            accountCardView.setEnabled(false);
+            accountCardView.setLayoutParams(constraintLayoutParams);
+            accountCardView.setCardBackgroundColor(MainMenu.this.getResources().getColor(R.color.inputTextWhite));
+            accountCardView.setRadius(PDS.f_dp2px(PDS.getWidth() * 0.0583941605839f));
+            accountCardView.setElevation(PDS.f_dp2px(0));
+            accountChangeMask.addView(accountCardView);
+
+            accountInnerCardView = new TextInputLayout(MainMenu.this);
+            accountInnerCardView.setId(View.generateViewId());
+            constraintLayoutParams = new ConstraintLayout.LayoutParams(
+                    ConstraintLayout.LayoutParams.MATCH_PARENT,
+                    ConstraintLayout.LayoutParams.WRAP_CONTENT
+            );
+            accountInnerCardView.setLayoutParams(constraintLayoutParams);
+            accountInnerCardView.setEnabled(false);
+            accountInnerCardView.setHintEnabled(false);
+            if (accountChangeRequestCode == 2)
+                accountInnerCardView.setEndIconMode(TextInputLayout.END_ICON_PASSWORD_TOGGLE);
+            accountCardView.addView(accountInnerCardView);
+
+            accountCardViewText = new EditText(MainMenu.this);
+            accountCardViewText.setId(View.generateViewId());
+            linearLayoutParams = new LinearLayout.LayoutParams(
+                    PDS.i_dp2px(PDS.getWidth() * 0.886301703162982f),
+                    PDS.i_dp2px(PDS.getHeight() * 0.056116722783389f)
+            );
+            linearLayoutParams.leftMargin = PDS.i_dp2px(PDS.getWidth() * 0.024330900243309f);
+            linearLayoutParams.rightMargin = PDS.i_dp2px(PDS.getWidth() * 0.024330900243309f);
+            accountCardViewText.setLayoutParams(linearLayoutParams);
+            accountCardViewText.setCompoundDrawablePadding(PDS.i_dp2px(PDS.getWidth() * 0.02919708029197f));
+            accountCardViewText.setGravity(Gravity.CENTER_VERTICAL);
+            accountCardViewText.setBackgroundColor(Color.TRANSPARENT);
+            if (accountChangeRequestCode == 1) {
+                accountCardViewText.setHint("New Doctor ID");
+            } else if (accountChangeRequestCode == 2) {
+                accountCardViewText.setHint("New Password");
+            } else {
+                accountCardViewText.setHint("New Patient ID");
+            }
+            accountCardViewText.setInputType(InputType.TYPE_NULL);
+            accountCardViewText.setImeOptions(EditorInfo.IME_ACTION_NEXT);
+            accountCardViewText.setSingleLine(true);
+            accountCardViewText.setHintTextColor(getResources().getColor(R.color.inputTextHintWhite));
+            accountCardViewText.setEnabled(false);
+            accountInnerCardView.addView(accountCardViewText);
+
+            accountChangePadding01 = new RelativeLayout(MainMenu.this);
+            accountChangePadding01.setId(View.generateViewId());
+            constraintLayoutParams = new ConstraintLayout.LayoutParams(
+                    PDS.i_dp2px(PDS.getWidth() * 0.9349635036496f),
+                    PDS.i_dp2px(PDS.getHeight() * 0.0617283950617f)
+            );
+            constraintLayoutParams.topMargin = PDS.i_dp2px(PDS.getHeight() * 0.01122334455667789f);
+            accountChangePadding01.setLayoutParams(constraintLayoutParams);
+            accountChangeMask.addView(accountChangePadding01);
+
+            ContextThemeWrapper newContext = new ContextThemeWrapper(MainMenu.this, R.style.Button1);
+            changeConfirmButton = new Button(newContext, null, R.style.Button1);
+            changeConfirmButton.setId(View.generateViewId());
+            relativeLayoutParams = new RelativeLayout.LayoutParams(
+                    PDS.i_dp2px(PDS.getWidth()  * 0.364963503649635f),
+                    PDS.i_dp2px(PDS.getHeight() * 0.05611672278f)
+            );
+            relativeLayoutParams.addRule(RelativeLayout.CENTER_HORIZONTAL);
+            changeConfirmButton.setLayoutParams(relativeLayoutParams);
+            changeConfirmButton.setClickable(false);
+            changeConfirmButton.setEnabled(false);
+            changeConfirmButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, PDS.getWidth() * 0.039559912621876497777f);
+            if (accountChangeRequestCode == 1 || accountChangeRequestCode == 2)
+                changeConfirmButton.setText("CHANGE");
+            else
+                changeConfirmButton.setText("REGISTER");
+            changeBackButton = new Button(MainMenu.this);
+            changeBackButton.setId(View.generateViewId());
+            relativeLayoutParams = new RelativeLayout.LayoutParams(
+                    PDS.i_dp2px(PDS.getHeight() * 0.05611672278f),
+                    PDS.i_dp2px(PDS.getHeight() * 0.05611672278f)
+            );
+            relativeLayoutParams.leftMargin = PDS.i_dp2px(PDS.getWidth() * 0.922798053527950088730551568f - PDS.getHeight() * 0.05611672278f);
+            relativeLayoutParams.addRule(RelativeLayout.RIGHT_OF);
+            changeBackButton.setAlpha(0.7f);
+            changeBackButton.setLayoutParams(relativeLayoutParams);
+            changeBackButton.setBackground(ContextCompat.getDrawable(MainMenu.this, R.drawable.ic_account_change_button_return));
+            changeBackButton.setClickable(false);
+            changeBackButton.setEnabled(false);
+            accountChangePadding01.addView(changeConfirmButton);
+            accountChangePadding01.addView(changeBackButton);
+
+
+            ConstraintSet constraintSet = new ConstraintSet();
+            constraintSet.clone(accountChangeMask);
+            constraintSet.connect(accountCardView.getId(), ConstraintSet.TOP, ConstraintSet.PARENT_ID, ConstraintSet.TOP, margin);
+            constraintSet.connect(accountCardView.getId(), ConstraintSet.START, ConstraintSet.PARENT_ID, ConstraintSet.START, margin);
+            constraintSet.connect(accountChangePadding01.getId(), ConstraintSet.TOP, accountCardView.getId(), ConstraintSet.BOTTOM, PDS.i_dp2px(PDS.getHeight() * 0.01122334455667789f));
+            constraintSet.connect(accountChangePadding01.getId(), ConstraintSet.START, ConstraintSet.PARENT_ID, ConstraintSet.START, 0);
+            constraintSet.connect(accountChangePadding01.getId(), ConstraintSet.START, ConstraintSet.PARENT_ID, ConstraintSet.START, 0);
+            constraintSet.applyTo(accountChangeMask);
+            changeConfirmButton.setOnClickListener(changeApplied -> accountChangePage());
+            changeBackButton.setOnClickListener(changeCancelled -> changeToAccountMainAnimation());
+
+            accountMainToChangeAnimation();
+        }
+        private void accountChangePage() {
+            String str = accountCardViewText.getText().toString();
+            String hintObj;
+            if (accountChangeRequestCode == 1) {
+                hintObj = "Doctor ID";
+            } else if (accountChangeRequestCode == 2) {
+                hintObj = "Password";
+            } else {
+                hintObj = "Patient ID";
+            }
+            if (accountChangeRequestCode == 1 || accountChangeRequestCode == 3) {
+                if (str.length() < 5 || str.length() > 18 || !checkUserIDValidity(str)) {
+                    warningMsg("A valid user ID is:\n" +
+                                    "1. 5-18 characters long\n"+
+                                    "2. only allowed to contain upper/lower-case " +
+                                    "English letters, 0-9 digits OR a special character: _",
+                            "Invalid "+hintObj+"!");
+                    return;
+                }
+            } else {
+                if (str.length() < 5 || str.length() > 25 || !checkPasswordValidity(str)) {
+                    warningMsg("A valid password is:\n" +
+                                    "1. 5-25 characters long\n"+
+                                    "2. only allowed to contain upper/lower-case " +
+                                    "English letters, 0-9 digits OR special characters: .,_!#@",
+                            "Invalid "+hintObj+"!");
+                    return;
+                }
+            }
+            if (accountChangeRequestCode == 1 && str.equals(currUserID)) {
+                warningMsg("Please try another ID or keep the current one.",
+                        "New doctor is same to the current one!");
+                return;
+            }
+            if (accountChangeRequestCode == 2 && str.equals(currPassword)) {
+                warningMsg("Please try another password or keep the current one.",
+                        "New password is same to the current one!");
+                return;
+            }
+            if (accountChangeRequestCode == 3 && patientMapping.containsKey(str)) {
+                warningMsg("Looks like the new patient ID has already existed in your patient list.",
+                        "The new patient has been found in your patient list!");
+                return;
+            }
+            if ((accountChangeRequestCode == 1 && doctorData.containsKey(str)) ||
+                    (accountChangeRequestCode == 3 && patientData.containsKey(str))) {
+                String noun = (accountChangeRequestCode == 1) ? "doctor" : "patient";
+                warningMsg("Looks like another " + noun + " has taken this " + hintObj + ".\nTry another one.",
+                        "Duplicate " + hintObj + " is found!");
+                return;
+            }
+            if (accountChangeRequestCode == 1 || accountChangeRequestCode == 2) {
+                String[] data = doctorData.get(currUserID);
+                if (accountChangeRequestCode == 1) {
+                    doctorData.remove(currUserID);
+                    doctorData.put(str, data);
+                    currUserID = str;
+                    showIDView.setText("Doctor ID:\n" + currUserID);
+                } else {
+                    data[0] = str;
+                    doctorData.put(currUserID, data);
+                    currPassword = str;
+                }
+                File file = new File(MainMenu.this.getFilesDir(), "data02.emory");
+                if (!file.exists()) {
+                    try {
+                        boolean createSuccess = file.createNewFile();
+                        if (!createSuccess) {
+                            System.err.println("Create file failed");
+                            System.exit(-1);
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        warningMsg("Please check if your disk is full or no permission allowed.",
+                                "Doctor data file cannot be created!");
+                        System.exit(-1);
+                    }
+                }
+                if (!file.canWrite() && !file.setWritable(true)) {
+                    System.err.println("Doctor data file cannot be written!");
+                    System.exit(-1);
+                }
+                try {
+                    FileWriter writer = new FileWriter(file, false);
+                    try {
+                        for (Map.Entry<String, String[]> doctorDataPair : doctorData.entrySet()) {
+                            writer.write(securityOriginal.encrypt(doctorDataPair.getKey()) + "\n");
+                            for (String currData : doctorDataPair.getValue())
+                                writer.write(securityOriginal.encrypt(currData) + "\n");
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        System.exit(-1);
+                    }
+                    writer.flush();
+                    writer.close();
+                    builder.setMessage("Remember your new "+hintObj+":\n"+str);
+                    builder.setTitle("Change " + hintObj +" Successful!");
+                    builder.setPositiveButton("OK", (dialog, id)->changeToAccountMainAnimation());
+                    builder.show();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    System.exit(-1);
+                }
+            } else {
+                String[] newPatientData = randomCreateUser("xxxxxxxx", "xxxxxxxx", "xxxxxxxx",
+                        0,0,0,8,false);
+                File file = new File(MainMenu.this.getFilesDir(), "data01.emory");
+                if (!file.exists()) {
+                    try {
+                        boolean createSuccess = file.createNewFile();
+                        if (!createSuccess) {
+                            System.err.println("Create file failed");
+                            System.exit(-1);
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        warningMsg("Please check if your disk is full or no permission allowed.",
+                                "Patient data file cannot be created!");
+                        System.exit(-1);
+                    }
+                }
+                if (!file.canWrite() && !file.setWritable(true)) {
+                    System.err.println("Patient data file cannot be written!");
+                    System.exit(-1);
+                }
+                try {
+                    File file2 = null;
+                    try {
+                        file2 = new File(getFilesDir().toString() + "/emory_health/data/"
+                                + security.encrypt(currUserHashCode) + "/patient_list.emory");
+                        if (!file2.exists()) {
+                            try {
+                                boolean createSuccess = file2.createNewFile();
+                                if (!createSuccess) {
+                                    System.err.println("Create file failed");
+                                    System.exit(-1);
+                                }
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                                warningMsg("Please check if your disk is full or no permission allowed.",
+                                        "Patient list file cannot be created!");
+                                System.exit(-1);
+                            }
+                        }
+                        if (!file2.canWrite() && !file2.setWritable(true)) {
+                            System.err.println("Patient list file cannot be written!");
+                            System.exit(-1);
+                        }
+                    } catch(Exception e) {
+                        e.printStackTrace();
+                        System.exit(-1);
+                    }
+                    FileWriter writer = new FileWriter(file, true);
+                    FileWriter writer2 = new FileWriter(file2, true);
+                    try {
+                        writer.write(securityOriginal.encrypt(str) + "\n");
+                        writer.write(securityOriginal.encrypt(newPatientData[1]) + "\n");
+                        writer.write(securityOriginal.encrypt(newPatientData[2]) + "\n");
+                        writer.write(securityOriginal.encrypt(currUserID) + "\n");
+                        writer2.write(security.encrypt(str) + "\n");
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        System.exit(-1);
+                    }
+                    writer.flush();
+                    writer.close();
+                    writer2.flush();
+                    writer2.close();
+                    patientMapping.put(str, newPatientData[2]);
+                    patientData.put(str, new String[]{newPatientData[1], newPatientData[2]});
+                    builder.setMessage("Here is your new patient info:\n" +
+                            "Patient ID: " + str + "\n" +
+                            "Password:   " + newPatientData[1]);
+                    builder.setTitle("Register New Patient Successful!");
+                    builder.setPositiveButton("OK", (dialog, id)->changeToAccountMainAnimation());
+                    builder.show();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    System.exit(-1);
+                }
+            }
+        }
+        private boolean checkUserIDValidity(final String userID) {
+
+            for (int i = 0; i < userID.length(); i++) {
+                char c = userID.charAt(i);
+                if (!((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+                        (c >= '0' && c <= '9') || c == '_'))
+                    return false;
+            }
+            return true;
+        }
+        private boolean checkPasswordValidity(final String password) {
+            for (int i = 0; i < password.length(); i++) {
+                char c = password.charAt(i);
+                if (!((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+                        (c >= '0' && c <= '9') || c == '_' || c == ',' || c == '.' || c == '!' ||
+                        c == '#' || c == '@'))
+                    return false;
+            }
+            return true;
+        }
+        private void patientListShow() {
+            menuButton01.setEnabled(false);
+            menuButton01.setClickable(false);
+            menuButton02.setEnabled(false);
+            menuButton02.setClickable(false);
+            menuButton03.setEnabled(false);
+            menuButton03.setClickable(false);
+            changeUserIDButton.setClickable(false);
+            changeUserIDButton.setEnabled(false);
+            changePasswordButton.setClickable(false);
+            changePasswordButton.setEnabled(false);
+            registerButton.setClickable(false);
+            registerButton.setEnabled(false);
+            showListButton.setClickable(false);
+            showListButton.setEnabled(false);
+
+            backgroundShadow = new ImageView(MainMenu.this);
+            relativeLayoutParams = new RelativeLayout.LayoutParams(
+                    RelativeLayout.LayoutParams.MATCH_PARENT,
+                    RelativeLayout.LayoutParams.MATCH_PARENT
+            );
+            backgroundShadow.setId(View.generateViewId());
+            backgroundShadow.setLayoutParams(relativeLayoutParams);
+            backgroundShadow.setImageResource(R.drawable.shadow_background);
+            backgroundShadow.setAlpha(0.0f);
+            backgroundShadow.bringToFront();
+            ground.addView(backgroundShadow);
+            base02.setAlpha(0.0f);
+            base02.bringToFront();
+
+            patientListBase = new ConstraintLayout(MainMenu.this);
+            patientListBase.setId(View.generateViewId());
+            relativeLayoutParams = new RelativeLayout.LayoutParams(
+                    PDS.i_dp2px(PDS.getWidth() * 0.9349635036496f),
+                    PDS.i_dp2px(PDS.getHeight() * 0.3928170594837f)
+            );
+            relativeLayoutParams.leftMargin = PDS.i_dp2px(PDS.getWidth() * 0.0325182481752f);
+            relativeLayoutParams.addRule(RelativeLayout.CENTER_VERTICAL);
+            patientListBase.setLayoutParams(relativeLayoutParams);
+            patientListBase.setBackground(ContextCompat.getDrawable(MainMenu.this, R.drawable.main_page_blue_board));
+            base02.addView(patientListBase);
+
+            patientListScroll = new ScrollView(MainMenu.this);
+            patientListScroll.setId(View.generateViewId());
+            constraintLayoutParams = new ConstraintLayout.LayoutParams(
+                    PDS.i_dp2px(PDS.getWidth()  * 0.837639902676363990f),
+                    PDS.i_dp2px(PDS.getHeight() * 0.280583613916947f)
+            );
+            patientListScroll.setLayoutParams(constraintLayoutParams);
+            patientListScroll.setEnabled(false);
+            patientListBase.addView(patientListScroll);
+
+            patientListLayout = new LinearLayout(MainMenu.this);
+            patientListLayout.setId(View.generateViewId());
+            constraintLayoutParams = new ConstraintLayout.LayoutParams(
+                    ConstraintLayout.LayoutParams.MATCH_PARENT,
+                    ConstraintLayout.LayoutParams.WRAP_CONTENT
+            );
+            patientListLayout.setLayoutParams(constraintLayoutParams);
+            patientListLayout.setOrientation(LinearLayout.VERTICAL);
+            patientListScroll.addView(patientListLayout);
+
+            for (Map.Entry<String, String> entries : patientMapping.entrySet()) {
+                EditText editText = new EditText(MainMenu.this);
+                editText.setId(View.generateViewId());
+                linearLayoutParams = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                );
+                linearLayoutParams.bottomMargin = PDS.i_dp2px(PDS.getHeight() * 0.01122334455667789f);
+                editText.setLayoutParams(linearLayoutParams);
+                editText.setCompoundDrawablesWithIntrinsicBounds(
+                        ContextCompat.getDrawable(MainMenu.this, R.drawable.ic_person_black), null, null, null);
+                editText.setCompoundDrawablePadding(PDS.i_dp2px(PDS.getWidth() * 0.01216545012165f));
+                editText.setTypeface(ResourcesCompat.getFont(MainMenu.this, R.font.font_burgela_italic), Typeface.NORMAL);
+                editText.setTextSize(TypedValue.COMPLEX_UNIT_PX, PDS.i_dp2px(PDS.getWidth() * 0.048661800f));
+                editText.setTextColor(MainMenu.this.getResources().getColor(R.color.black));
+                editText.setText(entries.getKey());
+                editText.setPaintFlags(0);
+                patientListLayout.addView(editText);
+            }
+
+            patientListButtonMask = new RelativeLayout(MainMenu.this);
+            patientListButtonMask.setId(View.generateViewId());
+            constraintLayoutParams = new ConstraintLayout.LayoutParams(
+                    ConstraintLayout.LayoutParams.MATCH_PARENT,
+                    ConstraintLayout.LayoutParams.WRAP_CONTENT
+            );
+            patientListButtonMask.setLayoutParams(constraintLayoutParams);
+            patientListBase.addView(patientListButtonMask);
+
+            ContextThemeWrapper newContext = new ContextThemeWrapper(MainMenu.this, R.style.Button1);
+            patientListButton = new Button(newContext, null, R.style.Button1);
+            patientListButton.setId(View.generateViewId());
+            relativeLayoutParams = new RelativeLayout.LayoutParams(
+                    PDS.i_dp2px(PDS.getWidth()  * 0.364963503649635f),
+                    PDS.i_dp2px(PDS.getHeight() * 0.05611672278f)
+            );
+            relativeLayoutParams.leftMargin = PDS.i_dp2px(PDS.getWidth() * 0.2849999999999825f);
+            patientListButton.setLayoutParams(relativeLayoutParams);
+            patientListButton.setEnabled(false);
+            patientListButton.setClickable(false);
+            patientListButton.setText("OK");
+            patientListButton.setTextSize(TypedValue.COMPLEX_UNIT_PX, PDS.i_dp2px(PDS.getHeight() * 0.02966993446640737333275f));
+            patientListButtonMask.addView(patientListButton);
+
+            ConstraintSet constraintSet = new ConstraintSet();
+            constraintSet.clone(patientListBase);
+            constraintSet.connect(patientListScroll.getId(), ConstraintSet.TOP, ConstraintSet.PARENT_ID, ConstraintSet.TOP, PDS.i_dp2px(PDS.getWidth() * 0.048661800486618f));
+            constraintSet.connect(patientListScroll.getId(), ConstraintSet.START, ConstraintSet.PARENT_ID, ConstraintSet.START, PDS.i_dp2px(PDS.getWidth() * 0.048661800486618f));
+            constraintSet.connect(patientListButtonMask.getId(), ConstraintSet.TOP, patientListScroll.getId(), ConstraintSet.BOTTOM, PDS.i_dp2px(PDS.getWidth()  * 0.03649635036496f));
+            constraintSet.connect(patientListButtonMask.getId(), ConstraintSet.START, ConstraintSet.PARENT_ID, ConstraintSet.START, 0);
+            constraintSet.applyTo(patientListBase);
+            patientListButton.setOnClickListener(patientListReturn -> listToAccountMainAnimation());
+
+
+            accountMainToListAnimation();
+        }
+
+
+
+
 
         private void initTutorialPage() {
             System.out.println("Enter initializing tutorial page");
@@ -1443,20 +2205,18 @@ public class MainMenu extends AppCompatActivity {
                 audio_recordList.setEnabled(false);
                 setStatusAudioRecords(false);
                 audio_uploadButton.setText(R.string.text_MainMenu_upload);
-                audioMap = null;
-                for (Button currBtn : audio_recordList_ButtonList) {
-                    if (currBtn.getParent() == audio_recordList)
-                        audio_recordList.removeView(currBtn);
-                }
                 audio_uploadButton.setTextColor(MainMenu.this.getResources().getColor(R.color.white));
                 if (audio_uploadButton.getParent() == base)
                     base.removeView(audio_uploadButton);
-                if (audio_recordList.getParent() == audio_scrollView)
-                    audio_scrollView.removeView(audio_recordList);
                 if (audio_scrollView.getParent() == base)
                     base.removeView(audio_scrollView);
+            } else if (currPageNum == 2) {
+                base.removeView(account_scrollView);
+                base.removeView(showIDLayout);
             }
         }
+
+
 
         private void logInTransitAnimation() {
             LinkedList<Animator> animators = new LinkedList<>();
@@ -1490,7 +2250,6 @@ public class MainMenu extends AppCompatActivity {
             });
             animatorSet.start();
         }
-
         private void audioMainToMediaAnimation() {
             LinkedList<Animator> animators = new LinkedList<>();
             ObjectAnimator animator;
@@ -1522,7 +2281,6 @@ public class MainMenu extends AppCompatActivity {
             });
             animatorSet.start();
         }
-
         private void mediaToAudioMainAnimation() {
             playButton.setClickable(false);
             playButton.setEnabled(false);
@@ -1604,18 +2362,162 @@ public class MainMenu extends AppCompatActivity {
             });
             animatorSet.start();
         }
+        private void accountMainToChangeAnimation() {
+            LinkedList<Animator> animators = new LinkedList<>();
+            ObjectAnimator animator;
+            animator = ObjectAnimator.ofFloat(base02, View.ALPHA, 0.0f, 1.0f);
+            animators.add(animator);
+            animator = ObjectAnimator.ofFloat(backgroundShadow, View.ALPHA, 0.0f, 1.0f);
+            animators.add(animator);
+            animatorSet = new AnimatorSet();
+            animatorSet.setDuration(300);
+            animatorSet.playTogether(animators);
+            animatorSet.addListener(new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    backgroundShadow.setAlpha(1.0f);
+                    base02.setAlpha(1.0f);
+                    accountChangeMask.setEnabled(true);
+                    accountCardView.setEnabled(true);
+                    accountInnerCardView.setEnabled(true);
+                    if (accountChangeRequestCode == 1 || accountChangeRequestCode == 3)
+                        accountCardViewText.setInputType(InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD);
+                    else
+                        accountCardViewText.setInputType(InputType.TYPE_TEXT_VARIATION_PASSWORD);
+                    accountCardViewText.setEnabled(true);
+                    changeConfirmButton.setClickable(true);
+                    changeConfirmButton.setEnabled(true);
+                    changeBackButton.setClickable(true);
+                    changeBackButton.setEnabled(true);
+                }
+            });
+            animatorSet.start();
+        }
+        private void changeToAccountMainAnimation() {
+            accountChangeMask.setEnabled(false);
+            accountCardView.setEnabled(false);
+            accountInnerCardView.setEnabled(false);
+            accountCardViewText.setEnabled(false);
+            accountCardViewText.setInputType(InputType.TYPE_NULL);
+            changeConfirmButton.setClickable(false);
+            changeConfirmButton.setEnabled(false);
+            changeBackButton.setClickable(false);
+            changeBackButton.setEnabled(false);
+            LinkedList<Animator> animators = new LinkedList<>();
+            ObjectAnimator animator;
+            animator = ObjectAnimator.ofFloat(base02, View.ALPHA, 1.0f, 0.0f);
+            animators.add(animator);
+            animator = ObjectAnimator.ofFloat(backgroundShadow, View.ALPHA, 1.0f, 0.0f);
+            animators.add(animator);
+            animatorSet = new AnimatorSet();
+            animatorSet.setDuration(300);
+            animatorSet.playTogether(animators);
+            animatorSet.addListener(new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    backgroundShadow.setAlpha(0.0f);
+                    base02.setAlpha(0.0f);
+                    if (backgroundShadow.getParent() == ground) ground.removeView(backgroundShadow);
+                    base02.removeAllViews();
+                    accountChangeMask.removeAllViews();
+                    accountCardView.removeAllViews();
+                    accountInnerCardView.removeAllViews();
+                    accountChangePadding01.removeAllViews();
+                    menuButton01.setEnabled(true);
+                    menuButton01.setClickable(true);
+                    menuButton02.setEnabled(true);
+                    menuButton02.setClickable(true);
+                    menuButton03.setEnabled(true);
+                    menuButton03.setClickable(true);
+                    changeUserIDButton.setClickable(true);
+                    changeUserIDButton.setEnabled(true);
+                    changePasswordButton.setClickable(true);
+                    changePasswordButton.setEnabled(true);
+                    registerButton.setClickable(true);
+                    registerButton.setEnabled(true);
+                    showListButton.setClickable(true);
+                    showListButton.setEnabled(true);
+                }
+            });
+            animatorSet.start();
+        }
+
+        private void accountMainToListAnimation() {
+            LinkedList<Animator> animators = new LinkedList<>();
+            ObjectAnimator animator;
+            animator = ObjectAnimator.ofFloat(base02, View.ALPHA, 0.0f, 1.0f);
+            animators.add(animator);
+            animator = ObjectAnimator.ofFloat(backgroundShadow, View.ALPHA, 0.0f, 1.0f);
+            animators.add(animator);
+            animatorSet = new AnimatorSet();
+            animatorSet.setDuration(300);
+            animatorSet.playTogether(animators);
+            animatorSet.addListener(new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    backgroundShadow.setAlpha(1.0f);
+                    base02.setAlpha(1.0f);
+                    patientListScroll.setEnabled(true);
+                    patientListButton.setClickable(true);
+                    patientListButton.setEnabled(true);
+                }
+            });
+            animatorSet.start();
+        }
+        private void listToAccountMainAnimation() {
+            patientListScroll.setEnabled(false);
+            patientListButton.setClickable(false);
+            patientListButton.setEnabled(false);
+            LinkedList<Animator> animators = new LinkedList<>();
+            ObjectAnimator animator;
+            animator = ObjectAnimator.ofFloat(base02, View.ALPHA, 1.0f, 0.0f);
+            animators.add(animator);
+            animator = ObjectAnimator.ofFloat(backgroundShadow, View.ALPHA, 1.0f, 0.0f);
+            animators.add(animator);
+            animatorSet = new AnimatorSet();
+            animatorSet.setDuration(300);
+            animatorSet.playTogether(animators);
+            animatorSet.addListener(new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    backgroundShadow.setAlpha(0.0f);
+                    base02.setAlpha(0.0f);
+                    base02.removeAllViews();
+                    ground.removeView(backgroundShadow);
+                    patientListLayout.removeAllViews();
+                    menuButton01.setEnabled(true);
+                    menuButton01.setClickable(true);
+                    menuButton02.setEnabled(true);
+                    menuButton02.setClickable(true);
+                    menuButton03.setEnabled(true);
+                    menuButton03.setClickable(true);
+                    changeUserIDButton.setClickable(true);
+                    changeUserIDButton.setEnabled(true);
+                    changePasswordButton.setClickable(true);
+                    changePasswordButton.setEnabled(true);
+                    registerButton.setClickable(true);
+                    registerButton.setEnabled(true);
+                    showListButton.setClickable(true);
+                    showListButton.setEnabled(true);
+                }
+            });
+            animatorSet.start();
+        }
     }
 
-    private class PatientPage {
 
+
+
+
+
+
+
+
+
+    private class PatientPage {
 
         private void patientPage() {
 
         }
-
-        private void init() {
-
-        }
     }
-
 }

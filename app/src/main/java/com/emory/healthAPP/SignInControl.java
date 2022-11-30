@@ -64,9 +64,8 @@ public class SignInControl extends AppCompatActivity {
     private float topPosition;
     private float midPosition;
 
-    private String currUserID;
-    private String currPassword;
-    private String currUserHashCode;
+    private String currUserID, currPassword, currUserHashCode;
+    private String patientAssignedDoctorID;
     private boolean isDoctor;
 
     @Override
@@ -141,11 +140,10 @@ public class SignInControl extends AppCompatActivity {
             boolean admin = (isDoctor) && adminCheck(currUserID, currPassword);
             boolean match = false;
             Iterator<Map.Entry<String, String[]>> userDataItr;
-            if (isDoctor) {
+            if (isDoctor)
                 userDataItr = doctorData.entrySet().iterator();
-            } else {
+            else
                 userDataItr = patientData.entrySet().iterator();
-            }
             if (!admin) {
                 while (userDataItr.hasNext()) {
                     Map.Entry<String, String[]> userDataPair = userDataItr.next();
@@ -154,6 +152,9 @@ public class SignInControl extends AppCompatActivity {
                         this.currUserID = currUserID;
                         this.currPassword = currPassword;
                         this.currUserHashCode = userDataPair.getValue()[1];
+                        if (!isDoctor) {
+                            this.patientAssignedDoctorID = userDataPair.getValue()[2];
+                        }
                         match = true;
                         break;
                     }
@@ -163,31 +164,31 @@ public class SignInControl extends AppCompatActivity {
 
             // If a match is found, user confirmed
             if (admin || match) {
-                if (admin) {
+                if (admin)
                     adminWrite(builder);
-                } else {
+                else
                     endAnimation();
-                }
 
                 // If a match is not found, alert
             } else {
-                String title = (isDoctor) ? "Wrong doctor ID or password!" :
-                        "Wrong user ID or password!";
+                String title = (isDoctor) ? "Wrong doctor ID or password!" : "Wrong user ID or password!";
                 warningMsg(builder, "Please try again.", title);
             }
         });
 
         // Click the [switch] button
         buttonSwitch.setOnClickListener(switchState -> {
-            /*
+/*
             String[] randomDoctor = randomCreateUser (
-                    "DOC_xxxxxx", "Dxxxxxx", "xxxxxx",
-                    4, 1, 0, 6);
+                    "DOC_xxxxxxxx", "Dxxxxxxxx", "xxxxxxxx",
+                    4, 1, 0, 8);
             currUserID = randomDoctor[0];
             currPassword = randomDoctor[1];
             currUserHashCode = randomDoctor[2];
             endAnimation();
-            */
+
+ */
+
             switchAnimation01();
         });
 
@@ -227,7 +228,7 @@ public class SignInControl extends AppCompatActivity {
 
         // Initialize the index and temporary userdata storage
         int index = 0;
-        String[] data = new String[3];
+        String[] data = new String[4];
 
 
         // Read patient log-in data from the data file line by line
@@ -235,11 +236,15 @@ public class SignInControl extends AppCompatActivity {
 
             // data[0] = username
             // data[1] = password
+            System.err.print("data" + index + ": ");
             data[index++] = patientDataIn.nextLine();
-            if (index == 3) {
+            System.err.println(data[index - 1]);
+            if (index == 4) {
                 index = 0;
                 try {
-                    this.patientData.put(security.decrypt(data[0]), new String[]{security.decrypt(data[1]), security.decrypt(data[2])});
+
+                    this.patientData.put(security.decrypt(data[0]),
+                            new String[]{security.decrypt(data[1]), security.decrypt(data[2]), security.decrypt(data[3])});
                 } catch (Exception e) {
 
                     // Error: 0xBE136E
@@ -320,7 +325,7 @@ public class SignInControl extends AppCompatActivity {
                 break;
             case 3:
                 // Digits
-                max = 57; min = 49;
+                max = 57; min = 48;
                 break;
             case 4:
                 return specialChar.charAt(rand.nextInt(specialChar.length()));
@@ -346,7 +351,7 @@ public class SignInControl extends AppCompatActivity {
             for (int i = 0; i < xLength; i++) {
                 currUserIDBuilder.setCharAt(i + pre1, randomChar(false));
                 currPasswordBuilder.setCharAt(i + pre2, randomChar(true));
-                currUserHashCodeBuilder.setCharAt(i + pre3, randomChar(false));
+                currUserHashCodeBuilder.setCharAt(i + pre3, randomChar(true));
             }
             currUserID = currUserIDBuilder.toString();
             currPassword = currPasswordBuilder.toString();
@@ -358,8 +363,8 @@ public class SignInControl extends AppCompatActivity {
 
         // Set up new doctorID & new password
         String[] randomDoctor = randomCreateUser (
-                "DOC_xxxxxx", "Dxxxxxx", "xxxxxx",
-                4, 1, 0, 6);
+                "DOC_xxxxxxxx", "Dxxxxxxxx", "xxxxxxxx",
+                4, 1, 0, 8);
         String currUserID = randomDoctor[0];
         String currPassword = randomDoctor[1];
         String currUserHashCode = randomDoctor[2];
@@ -685,6 +690,10 @@ public class SignInControl extends AppCompatActivity {
                 intent.putExtra("com.emory.healthAPP.currPassword", currPassword);
                 intent.putExtra("com.emory.healthAPP.currUserHashCode", currUserHashCode);
                 intent.putExtra("com.emory.healthAPP.isDoctor", isDoctor);
+                intent.putExtra("com.emory.healthAPP.patientAssignedDoctorID", patientAssignedDoctorID);
+                intent.putExtra("com.emory.healthAPP.patientAssignedDoctorID", patientAssignedDoctorID);
+                intent.putExtra("com.emory.healthAPP.patientData", patientData);
+                intent.putExtra("com.emory.healthAPP.doctorData", doctorData);
                 finish();
                 startActivity(intent);
             }
