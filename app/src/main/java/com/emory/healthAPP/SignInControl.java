@@ -22,6 +22,7 @@ import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
 
@@ -29,6 +30,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map;
@@ -45,6 +47,7 @@ public class SignInControl extends AppCompatActivity {
 
     // User data storage
     private HashMap<String, String[]> patientData;
+    private HashMap<String, HashSet<String>> patientAudioList;
     // User data storage
     private HashMap<String, String[]> doctorData;
 
@@ -58,7 +61,6 @@ public class SignInControl extends AppCompatActivity {
     private DataSecurity security;
     private Random rand;
     private ConvPDS PDS;
-    private int barHeight;
 
     // temp animation-used variable
     private float topPosition;
@@ -68,8 +70,25 @@ public class SignInControl extends AppCompatActivity {
     private String patientAssignedDoctorID;
     private boolean isDoctor;
 
+    private boolean isSignOutBack;
+
     @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putBoolean("save/emory_health/isSignOutBack", isSignOutBack);
+    }
+
+    @Override
+    public void onRestoreInstanceState(Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+        if (savedInstanceState != null) {
+            isSignOutBack = savedInstanceState.getBoolean("save/emory_health/isSignOutBack");
+            savedInstanceState.remove("save/emory_health/isSignOutBack");
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == 1) {
             if (grantResults == null || grantResults.length == 0) {
@@ -95,6 +114,9 @@ public class SignInControl extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_sign_in);
 
+        // Inherit sign out info from main page
+        inherit();
+
         // Initialize activity views
         isDoctor = true;
         userID = findViewById(R.id.SignInControl_username);
@@ -119,6 +141,7 @@ public class SignInControl extends AppCompatActivity {
             System.exit(-1);
         }
         patientData = new HashMap<>();
+        patientAudioList = new HashMap<>();
         doctorData = new HashMap<>();
         try {
             readUserData();
@@ -178,7 +201,7 @@ public class SignInControl extends AppCompatActivity {
 
         // Click the [switch] button
         buttonSwitch.setOnClickListener(switchState -> {
-/*
+            /*
             String[] randomDoctor = randomCreateUser (
                     "DOC_xxxxxxxx", "Dxxxxxxxx", "xxxxxxxx",
                     4, 1, 0, 8);
@@ -186,14 +209,21 @@ public class SignInControl extends AppCompatActivity {
             currPassword = randomDoctor[1];
             currUserHashCode = randomDoctor[2];
             endAnimation();
-
- */
+            */
 
             switchAnimation01();
         });
 
         Handler handler = new Handler();
-        handler.postDelayed(this::startAnimation01, 2000);
+        if (isSignOutBack)
+            handler.postDelayed(this::startAnimation02, 1500);
+        else
+            handler.postDelayed(this::startAnimation01, 2000);
+    }
+
+    private void inherit() {
+        Intent intent = getIntent();
+        isSignOutBack = intent.getBooleanExtra("com.emory.healthAPP.isSignOutBack", false);
     }
 
     /**
@@ -208,18 +238,17 @@ public class SignInControl extends AppCompatActivity {
         File doctorFile = new File(getFilesDir(), "data02.emory");
 
         // Determine if the data file exists.
-        if (!patientFile.exists()) {
-            if (!patientFile.createNewFile()) {
+        if (!patientFile.exists() && !patientFile.createNewFile()) {
 
-                // Error: 0x4AC971
-                System.err.println("Error 0x4AC971: create patient log-in file failed!");
-                System.exit(-1);
-            } else if (!doctorFile.createNewFile()) {
+            // Error: 0x4AC971
+            System.err.println("Error 0x4AC971: create patient log-in file failed!");
+            System.exit(-1);
+        }
+        if (!doctorFile.exists() && !doctorFile.createNewFile()) {
 
-                // Error: 0x4AC972
-                System.err.println("Error 0x4AC972: create doctor log-in file failed!");
-                System.exit(-1);
-            }
+            // Error: 0x4AC972
+            System.err.println("Error 0x4AC972: create doctor log-in file failed!");
+            System.exit(-1);
         }
 
         // Create scanner for the input file
@@ -236,15 +265,23 @@ public class SignInControl extends AppCompatActivity {
 
             // data[0] = username
             // data[1] = password
+            // data[2] = hashCode
+            // data[3] = doctorID
             System.err.print("data" + index + ": ");
             data[index++] = patientDataIn.nextLine();
             System.err.println(data[index - 1]);
             if (index == 4) {
                 index = 0;
                 try {
-
+                    String patientHashCode = security.decrypt(data[2]);
                     this.patientData.put(security.decrypt(data[0]),
                             new String[]{security.decrypt(data[1]), security.decrypt(data[2]), security.decrypt(data[3])});
+                    int numAudio = Integer.parseInt(security.decrypt(patientDataIn.nextLine()));
+                    HashSet<String> patientAudioList = new HashSet<>();
+                    for (int i = 0; i < numAudio; i++) {
+                        patientAudioList.add(security.decrypt(patientDataIn.nextLine()));
+                    }
+                    this.patientAudioList.put(patientHashCode, patientAudioList);
                 } catch (Exception e) {
 
                     // Error: 0xBE136E
@@ -261,6 +298,7 @@ public class SignInControl extends AppCompatActivity {
 
             // data[0] = username
             // data[1] = password
+            // data[2] = hashcode
             data[index++] = doctorDataIn.nextLine();
             if (index == 3) {
                 index = 0;
@@ -486,6 +524,10 @@ public class SignInControl extends AppCompatActivity {
         emoryLogo02.setLayoutParams(relativeLayoutParams);
         emoryLogo02.setTranslationX(PDS.f_dp2px(width * 0.2f));
         emoryLogo02.setTranslationY(PDS.f_dp2px(height * (2129.0f) / (12370.0f)));
+        if (isSignOutBack) {
+            emoryLogo01.setAlpha(1.0f);
+            emoryLogo02.setAlpha(0.5f);
+        }
 
         //------------------------------------------------------
         // bottom set
@@ -691,8 +733,8 @@ public class SignInControl extends AppCompatActivity {
                 intent.putExtra("com.emory.healthAPP.currUserHashCode", currUserHashCode);
                 intent.putExtra("com.emory.healthAPP.isDoctor", isDoctor);
                 intent.putExtra("com.emory.healthAPP.patientAssignedDoctorID", patientAssignedDoctorID);
-                intent.putExtra("com.emory.healthAPP.patientAssignedDoctorID", patientAssignedDoctorID);
                 intent.putExtra("com.emory.healthAPP.patientData", patientData);
+                intent.putExtra("com.emory.healthAPP.patientAudioList", patientAudioList);
                 intent.putExtra("com.emory.healthAPP.doctorData", doctorData);
                 finish();
                 startActivity(intent);
@@ -700,5 +742,4 @@ public class SignInControl extends AppCompatActivity {
         });
         animatorSet.start();
     }
-
 }

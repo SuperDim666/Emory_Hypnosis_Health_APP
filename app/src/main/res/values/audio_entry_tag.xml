@@ -4,4 +4,6 @@
         name="audio_entry_filename" />
     <item type="id"
         name="boolean_key" />
+    <item type="id"
+        name="audio_assign_hashCode" />
 </resources>
