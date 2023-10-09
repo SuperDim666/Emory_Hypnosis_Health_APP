@@ -15,6 +15,7 @@ import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.icu.util.Calendar;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Build;
@@ -37,8 +38,11 @@ import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.RelativeLayout;
 import android.widget.ScrollView;
 import android.widget.SeekBar;
@@ -65,6 +69,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.channels.FileChannel;
+import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -79,9 +85,72 @@ public class MainMenu extends AppCompatActivity {
     private HashMap<String, String[]> patientData;
     private HashMap<String, HashSet<String>> patientAudioList;
     private HashMap<String, String[]> doctorData;
+    private final String[] surveyNames = {
+            "Initial survey",
+            "15-day survey",
+            "1-month survey"
+    };
+    // TextView[survey #][page #][questions & choices]
+    private String[][][] surveyInfo = new String[][][] {
+            { // Initial Survey: Type 00
+                    { // Page 00
+                            "Please answer these questions as honestly as possible.",
+                            "In general, would you say your health is:",
+                            "Poor", "Fair", "Good", "Very Good", "Excellent"
+                    },
+                    { // Page 01
+                            "Please answer these questions as honestly as possible.",
+                            "In general, would you say your quality of life is:",
+                            "Poor", "Fair", "Good", "Very Good", "Excellent"
+                    },
+                    { // Page 02
+                            "Please answer these questions as honestly as possible.",
+                            "In general, how would you rate your physical health?",
+                            "Poor", "Fair", "Good", "Very Good", "Excellent"
+                    },
+                    { // Page 03
+                            "Please answer these questions as honestly as possible.",
+                            "In general, how would you rate your mental health, including your mood and your ability to think?",
+                            "Poor", "Fair", "Good", "Very Good", "Excellent"
+                    },
+                    { // Page 04
+                            "Please answer these questions as honestly as possible.",
+                            "In general. how would you rate your satisfaction with your social activities and relationships?",
+                            "Poor", "Fair", "Good", "Very Good", "Excellent"
+                    },
+                    { // Page 05
+                            "Please answer these questions as honestly as possible.",
+                            "In general, please rate how well you carry out your usual social activities and roles.(This includes activities at home, at work and in your community, and responsibilities as a parent, child, spouse, employee, friend, etc.)",
+                            "Poor", "Fair", "Good", "Very Good", "Excellent"
+                    },
+                    { // Page 06
+                            "Please use the following rating scale based on the past 7 days:",
+                            "How often have you been bothered emotional problems such as feeling anxious, depressed or irritable?",
+                            "Always", "Often", "Sometimes", "Rarely", "Never"
+                    },
+                    { // Page 07
+                            "Please use the following rating scale based on the past 7 days:",
+                            "How would you rate your fatigue average?",
+                            "Very severe", "Severe", "Moderate", "Mild", "None"
+                    }
+            }
+    };
 
     private final int REQUEST_CODE_EXTERNAL_FILE = 1099;
-    private RelativeLayout ground, ground_base, base, base02, baseFinal;
+
+    private LinearLayout surveyBase;
+    private ConstraintLayout surveyButtonBase, surveyCompleteBase;
+    private ImageButton surveyBack, surveyForward;
+    private ImageView surveyCompleteImage;
+    private TextView surveyPageNumberText, surveyQuestion01, surveyQuestion02, surveyCompleteText;
+    private View surveyLine;
+    private RadioGroup surveyChoicesGroup;
+    private RadioButton[] surveyChoices;
+    private int currSurvey = -1;
+    private int currSurveyPage = -1;
+    private int[] currSurveyPageChoices;
+
+    private RelativeLayout ground, ground_base, base, base02, base03, base04;
     private ImageView emoryLogo01, emoryLogo02;
     private String currUserID, currPassword, currUserHashCode, path;
     private boolean isDoctor;
@@ -137,7 +206,8 @@ public class MainMenu extends AppCompatActivity {
         emoryLogo02 = findViewById(R.id.MainMenu_emory_logo_02);
         base = findViewById(R.id.MainPage_Base);
         base02 = findViewById(R.id.MainPage_Base02);
-        baseFinal = findViewById(R.id.MainPage_BaseFinal);
+        base03 = findViewById(R.id.MainPage_Base03);
+        base04 = findViewById(R.id.MainPage_Base04);
 
         rand = new Random();
 
@@ -160,6 +230,7 @@ public class MainMenu extends AppCompatActivity {
                 this.getResources().getDisplayMetrics().widthPixels);
         // no status-bar and navigation bar
         immersive();
+        surveyInitialize();
 
         float midPosition = PDS.f_dp2px(PDS.getHeight() * 0.4f);
         RelativeLayout.LayoutParams relativeLayoutParams;
@@ -188,6 +259,202 @@ public class MainMenu extends AppCompatActivity {
         } else {
             patientPage = new PatientPage();
             patientPage.patientPage();
+        }
+    }
+
+    private void surveyInitialize() {
+        surveyBase = new LinearLayout(MainMenu.this);
+        RelativeLayout.LayoutParams relativeLayoutParams = new RelativeLayout.LayoutParams(
+                RelativeLayout.LayoutParams.MATCH_PARENT,
+                RelativeLayout.LayoutParams.MATCH_PARENT
+        );
+        surveyBase.setLayoutParams(relativeLayoutParams);
+        surveyBase.setOrientation(LinearLayout.VERTICAL);
+        surveyBase.setBackgroundColor(Color.WHITE);
+        surveyBase.setAlpha(0.0f);
+        surveyBase.setId(View.generateViewId());
+
+        surveyButtonBase = new ConstraintLayout(MainMenu.this);
+        LinearLayout.LayoutParams linearLayoutParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        surveyButtonBase.setLayoutParams(linearLayoutParams);
+        surveyButtonBase.setId(View.generateViewId());
+        surveyCompleteBase = new ConstraintLayout(MainMenu.this);
+        linearLayoutParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.MATCH_PARENT
+        );
+        surveyCompleteBase.setLayoutParams(linearLayoutParams);
+        surveyCompleteBase.setId(View.generateViewId());
+        surveyCompleteBase.setBackgroundColor(getResources().getColor(R.color.signInBackgroundColor));
+
+        surveyPageNumberText = new TextView(MainMenu.this);
+        ConstraintLayout.LayoutParams constraintLayoutParams = new ConstraintLayout.LayoutParams(
+                ConstraintLayout.LayoutParams.WRAP_CONTENT,
+                ConstraintLayout.LayoutParams.WRAP_CONTENT
+        );
+        surveyPageNumberText.setLayoutParams(constraintLayoutParams);
+        surveyPageNumberText.setId(View.generateViewId());
+        surveyPageNumberText.setTypeface(ResourcesCompat.getFont(MainMenu.this, R.font.font_survey_bold), Typeface.BOLD);
+        surveyPageNumberText.setTextSize(PDS.dp2sp_ff(PDS.getHeight()  * 0.01459034792368f));
+
+
+        Integer int3 = Integer.valueOf(3);
+        surveyBack = new ImageButton(MainMenu.this);
+        surveyForward = new ImageButton(MainMenu.this);
+        constraintLayoutParams = new ConstraintLayout.LayoutParams(
+                ConstraintLayout.LayoutParams.WRAP_CONTENT,
+                ConstraintLayout.LayoutParams.WRAP_CONTENT
+        );
+        surveyBack.setLayoutParams(constraintLayoutParams);
+        surveyBack = new ImageButton(MainMenu.this);
+        surveyForward = new ImageButton(MainMenu.this);
+        constraintLayoutParams = new ConstraintLayout.LayoutParams(
+                ConstraintLayout.LayoutParams.WRAP_CONTENT,
+                ConstraintLayout.LayoutParams.WRAP_CONTENT
+        );
+        surveyForward.setLayoutParams(constraintLayoutParams);
+        surveyBack.setImageResource(R.drawable.ic_survey_back);
+        surveyForward.setImageResource(R.drawable.ic_survey_forward);
+        surveyBack.setId(View.generateViewId());
+        surveyForward.setId(View.generateViewId());
+        surveyBack.setEnabled(false);
+        surveyBack.setClickable(false);
+        surveyForward.setEnabled(false);
+        surveyForward.setClickable(false);
+        surveyButtonBase.addView(surveyPageNumberText);
+        surveyButtonBase.addView(surveyBack);
+        surveyButtonBase.addView(surveyForward);
+        ConstraintSet constraintSet = new ConstraintSet();
+        constraintSet.clone(surveyButtonBase);
+        constraintSet.connect(surveyBack.getId(), ConstraintSet.TOP, ConstraintSet.PARENT_ID, ConstraintSet.TOP, PDS.i_dp2px(int3));
+        constraintSet.connect(surveyBack.getId(), ConstraintSet.START, ConstraintSet.PARENT_ID, ConstraintSet.START, PDS.i_dp2px(int3));
+        constraintSet.connect(surveyForward.getId(), ConstraintSet.TOP, ConstraintSet.PARENT_ID, ConstraintSet.TOP, PDS.i_dp2px(int3));
+        constraintSet.connect(surveyForward.getId(), ConstraintSet.END, ConstraintSet.PARENT_ID, ConstraintSet.END, PDS.i_dp2px(int3));
+
+        constraintSet.connect(surveyPageNumberText.getId(), ConstraintSet.TOP,    ConstraintSet.PARENT_ID, ConstraintSet.TOP,    0);
+        constraintSet.connect(surveyPageNumberText.getId(), ConstraintSet.BOTTOM, ConstraintSet.PARENT_ID, ConstraintSet.BOTTOM, 0);
+        constraintSet.connect(surveyPageNumberText.getId(), ConstraintSet.START,  ConstraintSet.PARENT_ID, ConstraintSet.START,  0);
+        constraintSet.connect(surveyPageNumberText.getId(), ConstraintSet.END,    ConstraintSet.PARENT_ID, ConstraintSet.END,    0);
+
+        constraintSet.applyTo(surveyButtonBase);
+        surveyBase.addView(surveyButtonBase);
+
+        surveyCompleteImage = new ImageView(MainMenu.this);
+        surveyCompleteText = new TextView(MainMenu.this);
+        surveyCompleteImage.setId(View.generateViewId());
+        surveyCompleteText.setId(View.generateViewId());
+        constraintLayoutParams = new ConstraintLayout.LayoutParams(
+                PDS.i_dp2px(PDS.getHeight() * 0.15f),
+                PDS.i_dp2px(PDS.getHeight() * 0.15f)
+        );
+        surveyCompleteImage.setLayoutParams(constraintLayoutParams);
+        surveyCompleteImage.setImageResource(R.drawable.ic_survey_complete);
+        constraintLayoutParams = new ConstraintLayout.LayoutParams(
+                ConstraintLayout.LayoutParams.MATCH_PARENT,
+                ConstraintLayout.LayoutParams.WRAP_CONTENT
+        );
+        surveyCompleteText.setLayoutParams(constraintLayoutParams);
+        surveyCompleteText.setTypeface(null, Typeface.BOLD);
+        surveyCompleteText.setText("Thank You");
+        surveyCompleteText.setTextSize(PDS.dp2sp_ff(PDS.getWidth() * 0.0729927f));
+        surveyCompleteText.setGravity(Gravity.CENTER);
+        surveyCompleteBase.addView(surveyCompleteImage); surveyCompleteBase.addView(surveyCompleteText);
+        constraintSet = new ConstraintSet();
+        constraintSet.clone(surveyCompleteBase);
+        Integer int10 = Integer.valueOf(10);
+        constraintSet.connect(surveyCompleteImage.getId(), ConstraintSet.TOP, ConstraintSet.PARENT_ID, ConstraintSet.TOP, PDS.i_dp2px(PDS.getHeight()  * 0.25f));
+        constraintSet.connect(surveyCompleteImage.getId(), ConstraintSet.START, ConstraintSet.PARENT_ID, ConstraintSet.START, PDS.i_dp2px((PDS.getWidth()-PDS.getHeight()*0.15f)/2.0f));
+        constraintSet.connect(surveyCompleteText.getId(), ConstraintSet.TOP, surveyCompleteImage.getId(), ConstraintSet.BOTTOM, PDS.i_dp2px(int10));
+        constraintSet.connect(surveyCompleteText.getId(), ConstraintSet.START, ConstraintSet.PARENT_ID, ConstraintSet.START, 0);
+        constraintSet.applyTo(surveyCompleteBase);
+
+        surveyQuestion01 = new TextView(MainMenu.this);
+        surveyQuestion02 = new TextView(MainMenu.this);
+        linearLayoutParams = new LinearLayout.LayoutParams(
+                PDS.i_dp2px(PDS.getWidth() * 0.9f),
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        linearLayoutParams.topMargin = PDS.i_dp2px(PDS.getHeight() * 0.016835016835f);
+        linearLayoutParams.leftMargin = PDS.i_dp2px(PDS.getWidth() * 0.05f);
+        surveyQuestion01.setLayoutParams(linearLayoutParams);
+        surveyQuestion01.setId(View.generateViewId());
+        surveyQuestion01.setTypeface(ResourcesCompat.getFont(MainMenu.this, R.font.font_survey_bold), Typeface.BOLD);
+        surveyQuestion01.setTextColor(Color.parseColor("#000000"));
+        surveyQuestion01.setTextSize(PDS.dp2sp_ff(PDS.getWidth()  * 0.0486618f));
+        linearLayoutParams = new LinearLayout.LayoutParams(
+                PDS.i_dp2px(PDS.getWidth() * 0.9f),
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        linearLayoutParams.topMargin = PDS.i_dp2px(PDS.getHeight() * 0.01122334455667789f);
+        linearLayoutParams.leftMargin = PDS.i_dp2px(PDS.getWidth() * 0.05f);
+        surveyQuestion02.setLayoutParams(linearLayoutParams);
+        surveyQuestion02.setId(View.generateViewId());
+        surveyQuestion02.setTypeface(ResourcesCompat.getFont(MainMenu.this, R.font.font_survey_bold), Typeface.BOLD);
+        surveyQuestion02.setTextColor(Color.parseColor("#000000"));
+        surveyLine = new View(MainMenu.this);
+        int3 = Integer.valueOf(3);
+        linearLayoutParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                PDS.i_dp2px(int3)
+        );
+        linearLayoutParams.topMargin = PDS.i_dp2px(PDS.getHeight() * 0.01122334455667789f);
+        surveyLine.setLayoutParams(linearLayoutParams);
+        surveyLine.setId(View.generateViewId());
+        surveyLine.setBackgroundColor(Color.parseColor("#000000"));
+        surveyBase.addView(surveyQuestion01); surveyBase.addView(surveyLine); surveyBase.addView(surveyQuestion02);
+
+        surveyChoicesGroup = new RadioGroup(MainMenu.this);
+        linearLayoutParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        linearLayoutParams.topMargin = PDS.i_dp2px(PDS.getHeight() * 0.00785634118967f);  // 7dp/891
+        surveyChoicesGroup.setLayoutParams(linearLayoutParams);
+        surveyChoicesGroup.setId(View.generateViewId());
+        surveyChoicesGroup.setOrientation(LinearLayout.VERTICAL);
+        surveyChoices = new RadioButton[5];
+        for (int i = 0; i < 5; i++) {
+            surveyChoices[i] = new RadioButton(MainMenu.this);
+            RadioGroup.LayoutParams radioGroupLayoutParams = new RadioGroup.LayoutParams(
+                    RadioGroup.LayoutParams.WRAP_CONTENT,
+                    RadioGroup.LayoutParams.WRAP_CONTENT
+            );
+            surveyChoices[i].setLayoutParams(radioGroupLayoutParams);
+            surveyChoices[i].setId(View.generateViewId());
+            surveyChoices[i].setTypeface(ResourcesCompat.getFont(MainMenu.this, R.font.font_survey), Typeface.NORMAL);
+            surveyChoices[i].setEnabled(false);
+            surveyChoices[i].setClickable(false);
+            surveyChoices[i].setTag(R.id.survey_choose_number, i);
+            RadioButton currBtn = surveyChoices[i];
+            surveyChoices[i].setOnClickListener(surveyChoose -> surveyChoiceClick(currBtn));
+            surveyChoicesGroup.addView(surveyChoices[i]);
+        }
+        surveyBase.addView(surveyChoicesGroup);
+
+    }
+    private void surveyChoiceClick(RadioButton curr) {
+        currSurveyPageChoices[currSurveyPage] = (Integer) curr.getTag(R.id.survey_choose_number);
+    }
+    private void surveySetText(int survey, int page, int checked, boolean disabled) {
+        surveyQuestion01.setText(surveyInfo[survey][page][0]);
+        surveyQuestion02.setText(surveyInfo[survey][page][1]);
+        surveyPageNumberText.setText("Page " + (page+1) + "/" + surveyInfo[survey].length);
+        surveyChoicesGroup.clearCheck();
+        for (int i = 0; i < 5; i ++) {
+            surveyChoices[i].setText(surveyInfo[survey][page][i+2]);
+            if (i == checked) {
+                surveyChoices[i].setChecked(true);
+            }
+            if (disabled) {
+                surveyChoices[i].setEnabled(false);
+                surveyChoices[i].setClickable(false);
+            } else {
+                surveyChoices[i].setEnabled(true);
+                surveyChoices[i].setClickable(true);
+            }
         }
     }
 
@@ -328,10 +595,12 @@ public class MainMenu extends AppCompatActivity {
             ground_base.setPadding(0, statusBarHeight, 0, 0);
             base.setPadding(0, statusBarHeight, 0, 0);
             base02.setPadding(0, statusBarHeight, 0, 0);
-            baseFinal.setPadding(0, statusBarHeight, 0, 0);
+            base03.setPadding(0, statusBarHeight, 0, 0);
+            base04.setPadding(0, statusBarHeight, 0, 0);
         }
     }
     private void warningMsg(final String msg, final String title) {
+        builder = new AlertDialog.Builder(this);
         builder.setMessage(msg);
         builder.setTitle(title);
         builder.setPositiveButton("OK", (dialog, id) -> {});
@@ -662,7 +931,7 @@ public class MainMenu extends AppCompatActivity {
 
         private final int AUDIO_PAGE = 1;
         private final int ACCOUNT_PAGE = 2;
-        private final int TUTORIAL_PAGE = 3;
+        private final int SURVEY_PAGE = 3;
 
         //------------------------------------------------------------------------------------------
 
@@ -728,13 +997,23 @@ public class MainMenu extends AppCompatActivity {
         private RelativeLayout signOutPadding01;
         private Button signOutConfirmButton, signOutBackButton;
 
+        //------------------------------------------------------------------------------------------
+        // Survey page
+        private Button survey_topButton;
+        private ScrollView survey_scrollView;
+        private LinearLayout survey_recordList01, survey_recordList02;
+        private LinkedList<Button> survey_recordList_ButtonList01, survey_recordList_ButtonList02;
+        private boolean survey_patientListChanged;
+        private int[][] surveyResult01, SurveyResult02;
+        private int survey_topButtonMode;
+
         private int currPageNum;
 
 
-
-
-
         private void doctorPage() {
+            survey_patientListChanged = true;
+            surveyBack.setOnClickListener(back -> surveyPageSwitch(false));
+            surveyForward.setOnClickListener(forward -> surveyPageSwitch(true));
             pathCheck();
             currPageNum = 0;
             initialized = false;
@@ -815,16 +1094,16 @@ public class MainMenu extends AppCompatActivity {
             menuButton03.setEnabled(false);
             menuButton01.setOnClickListener(audio -> initAudioPage());
             menuButton02.setOnClickListener(account -> initAccountPage());
-            menuButton03.setOnClickListener(tutorial -> initTutorialPage());
+            menuButton03.setOnClickListener(survey -> initSurveyPage());
 
             // set width & height of menu button texts
-            menuText01.setLayoutParams(new ConstraintLayout.LayoutParams(radius, ConstraintLayout.LayoutParams.WRAP_CONTENT));
+            menuText01.setLayoutParams(new ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.WRAP_CONTENT, ConstraintLayout.LayoutParams.WRAP_CONTENT));
             menuText02.setLayoutParams(new ConstraintLayout.LayoutParams(radius, ConstraintLayout.LayoutParams.WRAP_CONTENT));
             menuText03.setLayoutParams(new ConstraintLayout.LayoutParams(radius, ConstraintLayout.LayoutParams.WRAP_CONTENT));
             // set texts of menu buttons
             menuText01.setText(R.string.text_MainMenu_audio);
             menuText02.setText(R.string.text_MainMenu_account);
-            menuText03.setText(R.string.text_MainMenu_tutorial);
+            menuText03.setText(R.string.text_MainMenu_survey);
             // set font & bold of menu button texts
             menuText01.setTypeface(ResourcesCompat.getFont(MainMenu.this, R.font.font_formal), Typeface.BOLD);
             menuText02.setTypeface(ResourcesCompat.getFont(MainMenu.this, R.font.font_formal), Typeface.BOLD);
@@ -1039,6 +1318,51 @@ public class MainMenu extends AppCompatActivity {
             account_buttonList.addView(registerButton);
             account_buttonList.addView(signOutButton);
 
+            // -------------------------------------------------------------------------------------
+            // initializations of survey page items
+            survey_topButtonMode = 1;
+            newContext = new ContextThemeWrapper(MainMenu.this, R.style.surveyTopButton);
+            survey_topButton = new Button(newContext, null, R.style.surveyTopButton);
+            relativeLayoutParams = new RelativeLayout.LayoutParams(
+                    PDS.i_dp2px(PDS.getWidth() - PDS.getHeight() * 0.03f),
+                    PDS.i_dp2px(PDS.getHeight() * 0.07f)
+            );
+            relativeLayoutParams.topMargin = PDS.i_dp2px(PDS.getHeight() * 0.015f);
+            relativeLayoutParams.leftMargin = PDS.i_dp2px(PDS.getHeight() * 0.015f);
+            relativeLayoutParams.addRule(RelativeLayout.CENTER_HORIZONTAL);
+            survey_topButton.setLayoutParams(relativeLayoutParams);
+            survey_topButton.setClickable(false);
+            survey_topButton.setEnabled(false);
+            survey_topButton.setTextColor(MainMenu.this.getResources().getColor(R.color.white));
+            survey_topButton.setOnClickListener(switchState -> surveyTopButtonClick());
+            survey_scrollView = new ScrollView(MainMenu.this);
+            survey_recordList01 = new LinearLayout(MainMenu.this);
+            survey_recordList02 = new LinearLayout(MainMenu.this);
+            survey_topButton.setId(View.generateViewId());
+            survey_topButton.setText((patientListMapping.size()==0)?"You have no patient":"Patient Number: "+ patientListMapping.size());
+            survey_scrollView.setId(View.generateViewId());
+            survey_recordList01.setId(View.generateViewId());
+            survey_recordList02.setId(View.generateViewId());
+            // set each elements
+            relativeLayoutParams = new RelativeLayout.LayoutParams(
+                    RelativeLayout.LayoutParams.MATCH_PARENT,
+                    PDS.i_dp2px(PDS.getHeight() * (7.0f / 8.0f - 0.14f))
+            );
+            relativeLayoutParams.topMargin = PDS.i_dp2px(PDS.getHeight() * 0.1f);
+            survey_scrollView.setLayoutParams(relativeLayoutParams);
+            survey_scrollView.setEnabled(false);
+            linearLayoutParams = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.MATCH_PARENT
+            );
+            survey_recordList01.setLayoutParams(linearLayoutParams);
+            survey_recordList01.setOrientation(LinearLayout.VERTICAL);
+            survey_recordList01.setEnabled(false);
+            survey_recordList02.setLayoutParams(linearLayoutParams);
+            survey_recordList02.setOrientation(LinearLayout.VERTICAL);
+            survey_recordList02.setEnabled(false);
+            survey_scrollView.addView(survey_recordList01);
+
             // default starting page
             initAudioPage();
         }
@@ -1089,9 +1413,9 @@ public class MainMenu extends AppCompatActivity {
             currPageNum = AUDIO_PAGE;  // set current page as audio page
 
             // change menu pattern
-            menuButton01.setImageResource(R.drawable.cd_logo_02);
+            menuButton01.setImageResource(R.drawable.audio_logo_02);
             menuButton02.setImageResource(R.drawable.account_logo_01);
-            menuButton03.setImageResource(R.drawable.book_logo_01);
+            menuButton03.setImageResource(R.drawable.survey_logo_01);
             menuText01.setTextColor(MainMenu.this.getResources().getColor(R.color.menu_cyan));
             menuText02.setTextColor(MainMenu.this.getResources().getColor(R.color.white));
             menuText03.setTextColor(MainMenu.this.getResources().getColor(R.color.white));
@@ -1638,8 +1962,8 @@ public class MainMenu extends AppCompatActivity {
             backgroundShadow02.setAlpha(0.0f);
             backgroundShadow02.bringToFront();
             ground.addView(backgroundShadow02);
-            baseFinal.setAlpha(0.0f);
-            baseFinal.bringToFront();
+            base03.setAlpha(0.0f);
+            base03.bringToFront();
 
             patientListBase = new ConstraintLayout(MainMenu.this);
             patientListBase.setId(View.generateViewId());
@@ -1651,7 +1975,7 @@ public class MainMenu extends AppCompatActivity {
             relativeLayoutParams.addRule(RelativeLayout.CENTER_VERTICAL);
             patientListBase.setLayoutParams(relativeLayoutParams);
             patientListBase.setBackground(ContextCompat.getDrawable(MainMenu.this, R.drawable.main_page_blue_board));
-            baseFinal.addView(patientListBase);
+            base03.addView(patientListBase);
 
             patientListScroll = new ScrollView(MainMenu.this);
             patientListScroll.setId(View.generateViewId());
@@ -1821,6 +2145,7 @@ public class MainMenu extends AppCompatActivity {
                 rewritePatientData();
             }
             if (changeCount) {
+                builder = new AlertDialog.Builder(MainMenu.this);
                 builder.setTitle("Assignment Successful");
                 builder.setMessage("Patients' audios assignment complete!");
                 builder.setPositiveButton("OK", (dialog, id) -> {
@@ -1874,8 +2199,8 @@ public class MainMenu extends AppCompatActivity {
             backgroundShadow02.setAlpha(0.0f);
             backgroundShadow02.bringToFront();
             ground.addView(backgroundShadow02);
-            baseFinal.setAlpha(0.0f);
-            baseFinal.bringToFront();
+            base03.setAlpha(0.0f);
+            base03.bringToFront();
 
             audioDeleteMask = new ConstraintLayout(MainMenu.this);
             audioDeleteMask.setId(View.generateViewId());
@@ -1887,7 +2212,7 @@ public class MainMenu extends AppCompatActivity {
             relativeLayoutParams.addRule(RelativeLayout.CENTER_VERTICAL);
             audioDeleteMask.setLayoutParams(relativeLayoutParams);
             audioDeleteMask.setBackground(ContextCompat.getDrawable(MainMenu.this, R.drawable.main_page_blue_board));
-            baseFinal.addView(audioDeleteMask);
+            base03.addView(audioDeleteMask);
 
             audioDeleteTextView = new TextView(MainMenu.this);
             audioDeleteTextView.setId(View.generateViewId());
@@ -2072,9 +2397,9 @@ public class MainMenu extends AppCompatActivity {
             currPageNum = ACCOUNT_PAGE;  // set current page as account page
 
             // change menu pattern
-            menuButton01.setImageResource(R.drawable.cd_logo_01);
+            menuButton01.setImageResource(R.drawable.audio_logo_01);
             menuButton02.setImageResource(R.drawable.account_logo_02);
-            menuButton03.setImageResource(R.drawable.book_logo_01);
+            menuButton03.setImageResource(R.drawable.survey_logo_01);
             menuText01.setTextColor(MainMenu.this.getResources().getColor(R.color.white));
             menuText02.setTextColor(MainMenu.this.getResources().getColor(R.color.menu_cyan));
             menuText03.setTextColor(MainMenu.this.getResources().getColor(R.color.white));
@@ -2152,6 +2477,7 @@ public class MainMenu extends AppCompatActivity {
                     try {
                         String curr = security.decrypt(listDataIn.nextLine());
                         patientListMapping.put(curr, patientData.get(curr)[1]);
+                        survey_patientListChanged = true;
                     } catch (Exception e) {
                         System.err.println("Error 0xC00003: cannot read/decrypt patient list data!");
                         e.printStackTrace();
@@ -2423,6 +2749,7 @@ public class MainMenu extends AppCompatActivity {
                     }
                     writer.flush();
                     writer.close();
+                    builder = new AlertDialog.Builder(MainMenu.this);
                     builder.setMessage("Remember your new "+hintObj+":\n"+str);
                     builder.setTitle("Change " + hintObj +" Successful!");
                     builder.setPositiveButton("OK", (dialog, id)->changeToAccountMainAnimation());
@@ -2498,8 +2825,38 @@ public class MainMenu extends AppCompatActivity {
                     writer2.flush();
                     writer2.close();
                     patientListMapping.put(str, newPatientData[2]);
+                    survey_patientListChanged = true;
                     patientData.put(str, new String[]{newPatientData[1], newPatientData[2], currUserID});
                     patientAudioList.put(newPatientData[2], new HashSet<>());
+                    try {
+                        DataSecurity patientSecurity = new DataSecurity(newPatientData[2]);
+                        File folder = new File(MainMenu.this.getFilesDir().toString() +
+                                "/emory_health/data/"+ patientSecurity.encrypt(newPatientData[2]) +"/survey");
+                        if (!folder.exists() && !folder.mkdirs()) {
+                            System.err.println("Error 0x001C5: create survey record directory failed.");
+                            System.exit(-1);
+                        }
+                        File surveyFile = new File(folder.toString(), "initial_signal.emory");
+                        boolean createSuccess = surveyFile.createNewFile();
+                        if (!createSuccess) {
+                            System.err.println("Error 0x001C6: Create file failed");
+                            System.exit(-1);
+                        }
+                        surveyFile = new File(folder.toString(), "survey_total.emory");
+                        createSuccess = surveyFile.createNewFile();
+                        if (!createSuccess) {
+                            System.err.println("Error 0x001C6: Create file failed");
+                            System.exit(-1);
+                        }
+                        writer = new FileWriter(surveyFile, false);
+                        writer.write(patientSecurity.encrypt("0") + "\n");
+                        writer.flush();
+                        writer.close();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        System.exit(-1);
+                    }
+                    builder = new AlertDialog.Builder(MainMenu.this);
                     builder.setMessage("Here is your new patient info:\n" +
                             "Patient ID: " + str + "\n" +
                             "Password:   " + newPatientData[1]);
@@ -2770,13 +3127,267 @@ public class MainMenu extends AppCompatActivity {
             accountMainToSignOutAnimation();
         }
 
+        private void initSurveyPage() {
+            if (currPageNum == 3) return;
+            if (currPageNum != 0) destroyCurrPage();
 
+            currPageNum = SURVEY_PAGE;  // set current page as account page
 
+            // change menu pattern
+            menuButton01.setImageResource(R.drawable.audio_logo_01);
+            menuButton02.setImageResource(R.drawable.account_logo_01);
+            menuButton03.setImageResource(R.drawable.survey_logo_02);
+            menuText01.setTextColor(MainMenu.this.getResources().getColor(R.color.white));
+            menuText02.setTextColor(MainMenu.this.getResources().getColor(R.color.white));
+            menuText03.setTextColor(MainMenu.this.getResources().getColor(R.color.menu_cyan));
 
+            // read all existing audios' filenames, title & description
+            surveyPatientListLoad();
+            base.addView(survey_topButton);
+            base.addView(survey_scrollView);
 
-        private void initTutorialPage() {
-            System.out.println("Enter initializing tutorial page");
+            menuButton01.setClickable(true);
+            menuButton01.setEnabled(true);
+            menuButton02.setClickable(true);
+            menuButton02.setEnabled(true);
+            menuButton03.setClickable(true);
+            menuButton03.setEnabled(true);
         }
+        private void surveyPatientListLoad() {
+            if (!survey_patientListChanged) return;
+            survey_recordList01.removeAllViews();
+            survey_recordList_ButtonList01 = new LinkedList<>();
+            for (Map.Entry<String, String> entries : patientListMapping.entrySet()) {
+                ContextThemeWrapper newContext = new ContextThemeWrapper(MainMenu.this, R.style.SurveyButtonMask01);
+                Button newSurveyButton = new Button(newContext, null, R.style.SurveyButtonMask01);
+                newSurveyButton.setId(View.generateViewId());
+                linearLayoutParams = new LinearLayout.LayoutParams(
+                        PDS.i_dp2px(PDS.getWidth() * 0.8f),
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                );
+                linearLayoutParams.leftMargin = PDS.i_dp2px(PDS.getWidth() * 0.1f);
+                linearLayoutParams.topMargin = PDS.i_dp2px(PDS.getHeight() * 0.02f);
+                newSurveyButton.setLayoutParams(linearLayoutParams);
+                newSurveyButton.setClickable(true);
+                newSurveyButton.setEnabled(true);
+                newSurveyButton.setText(entries.getKey());
+                newSurveyButton.setTextColor(MainMenu.this.getResources().getColor(R.color.buttonAudioButtonTextColor));
+                newSurveyButton.setTag(R.id.survey_assign_patientData, new String[] {entries.getKey(), entries.getValue()});
+                newSurveyButton.setOnClickListener(next -> survey_select01((String[]) newSurveyButton.getTag(R.id.survey_assign_patientData)));
+                survey_recordList_ButtonList01.add(newSurveyButton);
+                survey_recordList01.addView(newSurveyButton);
+            }
+            survey_topButtonMode = 1;
+            survey_topButton.setText((patientListMapping.size()==0)?"You have no patient":"Patient Number: "+ patientListMapping.size());
+            survey_scrollView.removeAllViews();
+            survey_scrollView.addView(survey_recordList01);
+            survey_patientListChanged = false;
+        }
+        private void survey_select01(String[] patientInfo) {
+            try{
+                DataSecurity patientSecurity = new DataSecurity(patientInfo[1]);
+                File folder = new File(MainMenu.this.getFilesDir().toString() +
+                        "/emory_health/data/"+ patientSecurity.encrypt(patientInfo[1]) +"/survey");
+                if (!folder.exists() && !folder.mkdirs()) {
+                    System.err.println("Error 0x000C4: create survey record directory failed.");
+                    System.exit(-1);
+                }
+                String currSurveyDir = folder.toString();
+                File surveyFile01 = new File(currSurveyDir, "survey_total.emory");
+                if (surveyFile01.exists()) {
+                    Scanner surveyDataIn = new Scanner(surveyFile01);
+                    int num01 = Integer.parseInt(patientSecurity.decrypt(surveyDataIn.nextLine()));
+                    surveyResult01 = new int[num01][4];
+                    for (int i = 0; i < num01; i++) {
+                        int type = Integer.parseInt(patientSecurity.decrypt(surveyDataIn.nextLine()));
+                        int year = Integer.parseInt(patientSecurity.decrypt(surveyDataIn.nextLine()));
+                        int month = Integer.parseInt(patientSecurity.decrypt(surveyDataIn.nextLine()));
+                        int day = Integer.parseInt(patientSecurity.decrypt(surveyDataIn.nextLine()));
+                        surveyResult01[i] = new int[] {type, year, month, day};
+                    }
+                    surveyDataIn.close();
+                } else {
+                    try {
+                        boolean createSuccess = surveyFile01.createNewFile();
+                        if (!createSuccess) {
+                            System.err.println("Create file failed");
+                            System.exit(-1);
+                        }
+                        surveyResult01 = new int[0][];
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        System.exit(-1);
+                    }
+                }
+                survey_recordList02.removeAllViews();
+                survey_recordList_ButtonList02 = new LinkedList<>();
+                Arrays.sort(surveyResult01, (entry1, entry2) -> {
+                    if (entry1[1] == entry2[1]) {
+                        if (entry1[2] == entry2[2]){
+                            if (entry1[3] == entry2[3]){
+                                return Integer.compare(entry1[0], entry2[0]);
+                            } else {
+                                return Integer.compare(entry2[3], entry1[3]);
+                            }
+                        } else {
+                            return Integer.compare(entry2[2], entry1[2]);
+                        }
+                    } else {
+                        return Integer.compare(entry2[1], entry1[1]);
+                    }
+                });
+                for (int[] currSurvey : surveyResult01) {
+                    ContextThemeWrapper newContext = new ContextThemeWrapper(MainMenu.this, R.style.SurveyButtonMask02);
+                    Button newSurveyButton = new Button(newContext, null, R.style.SurveyButtonMask02);
+                    newSurveyButton.setId(View.generateViewId());
+                    linearLayoutParams = new LinearLayout.LayoutParams(
+                            PDS.i_dp2px(PDS.getWidth() * 0.8f),
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                    );
+                    linearLayoutParams.leftMargin = PDS.i_dp2px(PDS.getWidth() * 0.1f);
+                    linearLayoutParams.topMargin = PDS.i_dp2px(PDS.getHeight() * 0.02f);
+                    newSurveyButton.setLayoutParams(linearLayoutParams);
+                    newSurveyButton.setClickable(true);
+                    newSurveyButton.setEnabled(true);
+                    newSurveyButton.setText(surveyNames[currSurvey[0]]+"\n"+
+                            String.valueOf(currSurvey[1]) +"-"+
+                            ((currSurvey[2]<10) ? "":"0")+String.valueOf(currSurvey[2])+"-"+
+                            ((currSurvey[3]<10) ? "":"0")+String.valueOf(currSurvey[3]));
+                    newSurveyButton.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
+                    newSurveyButton.setGravity(Gravity.CENTER);
+                    newSurveyButton.setTextColor(MainMenu.this.getResources().getColor(R.color.buttonAudioButtonTextColor));
+                    newSurveyButton.setTag(R.id.survey_assign_patientData, new String[] {
+                            patientInfo[1],
+                            String.valueOf(currSurvey[0]), String.valueOf(currSurvey[1]),
+                            String.valueOf(currSurvey[2]), String.valueOf(currSurvey[3])});
+
+                    newSurveyButton.setOnClickListener(next -> survey_select02((String[]) newSurveyButton.getTag(R.id.survey_assign_patientData)));
+                    survey_recordList_ButtonList02.add(newSurveyButton);
+                    survey_recordList02.addView(newSurveyButton);
+                }
+                survey_topButtonMode = 2;
+                survey_scrollView.removeAllViews();
+                survey_scrollView.addView(survey_recordList02);
+                survey_topButton.setText("RETURN to Patient List");
+                survey_topButton.setEnabled(true);
+                survey_topButton.setClickable(true);
+            } catch (Exception e) {
+                e.printStackTrace();
+                System.exit(-1);
+            }
+        }
+        private void survey_select02(String[] data) {
+            menuButton01.setEnabled(false);
+            menuButton01.setClickable(false);
+            menuButton02.setEnabled(false);
+            menuButton02.setClickable(false);
+            menuButton03.setEnabled(false);
+            menuButton03.setClickable(false);
+            survey_topButton.setEnabled(false);
+            survey_topButton.setClickable(false);
+            for (Button btn : survey_recordList_ButtonList01) {btn.setEnabled(false);btn.setClickable(false);}
+            for (Button btn : survey_recordList_ButtonList02) {btn.setEnabled(false);btn.setClickable(false);}
+            survey_scrollView.setEnabled(false);
+            survey_scrollView.setClickable(false);
+            surveyBase.setAlpha(0.0f);
+            surveyBack.setEnabled(false);
+            surveyBack.setClickable(false);
+            surveyForward.setEnabled(false);
+            surveyForward.setClickable(false);
+            for (int i = 0; i < 5; i++) {
+                surveyChoices[i].setEnabled(false);
+                surveyChoices[i].setClickable(false);
+            }
+            try {
+                DataSecurity securityPatient = new DataSecurity(data[0]);
+                String docName = data[1] + data[2] + data[3] + data[4];
+                File file = new File(MainMenu.this.getFilesDir().toString() +
+                        "/emory_health/data/" + securityPatient.encrypt(data[0]) +
+                        "/survey/"+ securityPatient.encrypt(docName)+".emory");
+                if (!file.exists()) {
+                    try {
+                        boolean createSuccess = file.createNewFile();
+                        if (!createSuccess) {
+                            System.err.println("Create file failed");
+                            System.exit(-1);
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        System.exit(-1);
+                    }
+                }
+                Scanner in = new Scanner(file);
+                int totalNum = Integer.parseInt(securityPatient.decrypt(in.nextLine()));
+                currSurveyPageChoices = new int[totalNum];
+                int i = 0;
+                while (in.hasNextLine()) {
+                    currSurveyPageChoices[i++] = Integer.parseInt(securityPatient.decrypt(in.nextLine()));
+                }
+                in.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+                System.exit(-1);
+            }
+            currSurvey = Integer.parseInt(data[1]);
+            currSurveyPage = 0;
+            surveySetText(currSurvey, currSurveyPage, currSurveyPageChoices[currSurveyPage], true);
+            base04.bringToFront();
+            base04.addView(surveyBase);
+
+            LinkedList<Animator> animators = new LinkedList<>();
+            ObjectAnimator animator;
+            animator = ObjectAnimator.ofFloat(surveyBase, View.ALPHA, 0.0f, 1.0f);
+            animators.add(animator);
+            AnimatorSet animatorSet = new AnimatorSet();
+            animatorSet.setDuration(200);
+            animatorSet.playTogether(animators);
+            animatorSet.addListener(new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    surveyBase.setAlpha(1.0f);
+                    surveyBack.setEnabled(true);
+                    surveyBack.setClickable(true);
+                    surveyForward.setEnabled(true);
+                    surveyForward.setClickable(true);
+                }
+            });
+            animatorSet.start();
+        }
+        private void surveyTopButtonClick() {
+            if (survey_topButtonMode == 1) return;
+            survey_topButtonMode = 1;
+            survey_scrollView.removeAllViews();
+            survey_scrollView.addView(survey_recordList01);
+            survey_topButton.setText((patientListMapping.size()==0)?"You have no patient":"Patient Number: "+ patientListMapping.size());
+        }
+        private void surveyPageSwitch(boolean isForward) {
+            if (isForward) {
+                currSurveyPage++;
+                if (currSurveyPage >= surveyInfo[currSurvey].length) {
+                    currSurveyPage--;
+                } else {
+                    surveySetText(currSurvey, currSurveyPage, currSurveyPageChoices[currSurveyPage], true);
+                    if (currSurveyPage == surveyInfo[currSurvey].length - 1) {
+                        surveyForward.setEnabled(false);
+                        surveyForward.setClickable(false);
+                        surveyForward.setAlpha(0.0f);
+                    }
+                }
+            } else {
+                currSurveyPage--;
+                if (currSurveyPage == -1) {
+                    surveyReturnAnimation();
+                } else {
+                    surveySetText(currSurvey, currSurveyPage, currSurveyPageChoices[currSurveyPage], true);
+                    surveyForward.setAlpha(1.0f);
+                    surveyForward.setEnabled(true);
+                    surveyForward.setClickable(true);
+                }
+            }
+        }
+
+
+
         private void destroyCurrPage() {
             menuButton01.setClickable(false);
             menuButton02.setClickable(false);
@@ -2800,9 +3411,11 @@ public class MainMenu extends AppCompatActivity {
             } else if (currPageNum == 2) {
                 base.removeView(account_scrollView);
                 base.removeView(showIDLayout);
+            } else {
+                base.removeView(survey_scrollView);
+                base.removeView(survey_topButton);
             }
         }
-
 
 
         private void logInTransitAnimation() {
@@ -2956,7 +3569,7 @@ public class MainMenu extends AppCompatActivity {
         private void mediaToAssignAnimation() {
             LinkedList<Animator> animators = new LinkedList<>();
             ObjectAnimator animator;
-            animator = ObjectAnimator.ofFloat(baseFinal, View.ALPHA, 0.0f, 1.0f);
+            animator = ObjectAnimator.ofFloat(base03, View.ALPHA, 0.0f, 1.0f);
             animators.add(animator);
             animator = ObjectAnimator.ofFloat(backgroundShadow02, View.ALPHA, 0.0f, 1.0f);
             animators.add(animator);
@@ -2966,7 +3579,7 @@ public class MainMenu extends AppCompatActivity {
             animatorSet.addListener(new AnimatorListenerAdapter() {
                 @Override
                 public void onAnimationEnd(Animator animation) {
-                    baseFinal.setAlpha(1.0f);
+                    base03.setAlpha(1.0f);
                     backgroundShadow02.setAlpha(1.0f);
                     patientListButton.setEnabled(true);
                     patientListButton.setClickable(true);
@@ -2991,7 +3604,7 @@ public class MainMenu extends AppCompatActivity {
             }
             LinkedList<Animator> animators = new LinkedList<>();
             ObjectAnimator animator;
-            animator = ObjectAnimator.ofFloat(baseFinal, View.ALPHA, 1.0f, 0.0f);
+            animator = ObjectAnimator.ofFloat(base03, View.ALPHA, 1.0f, 0.0f);
             animators.add(animator);
             animator = ObjectAnimator.ofFloat(backgroundShadow02, View.ALPHA, 1.0f, 0.0f);
             animators.add(animator);
@@ -3001,7 +3614,7 @@ public class MainMenu extends AppCompatActivity {
             animatorSet.addListener(new AnimatorListenerAdapter() {
                 @Override
                 public void onAnimationEnd(Animator animation) {
-                    baseFinal.setAlpha(0.0f);
+                    base03.setAlpha(0.0f);
                     backgroundShadow02.setAlpha(0.0f);
                     patientListButton.setEnabled(false);
                     patientListButton.setClickable(false);
@@ -3010,7 +3623,7 @@ public class MainMenu extends AppCompatActivity {
                         editText.setClickable(false);
                     }
                     if (backgroundShadow02.getParent() == ground) ground.removeView(backgroundShadow02);
-                    baseFinal.removeAllViews();
+                    base03.removeAllViews();
                     patientListBase.removeAllViews();
                     patientListButtonMask.removeAllViews();
                     patientListScroll.removeAllViews();
@@ -3038,7 +3651,7 @@ public class MainMenu extends AppCompatActivity {
         private void mediaToAudioDeleteAnimation() {
             LinkedList<Animator> animators = new LinkedList<>();
             ObjectAnimator animator;
-            animator = ObjectAnimator.ofFloat(baseFinal, View.ALPHA, 0.0f, 1.0f);
+            animator = ObjectAnimator.ofFloat(base03, View.ALPHA, 0.0f, 1.0f);
             animators.add(animator);
             animator = ObjectAnimator.ofFloat(backgroundShadow02, View.ALPHA, 0.0f, 1.0f);
             animators.add(animator);
@@ -3048,7 +3661,7 @@ public class MainMenu extends AppCompatActivity {
             animatorSet.addListener(new AnimatorListenerAdapter() {
                 @Override
                 public void onAnimationEnd(Animator animation) {
-                    baseFinal.setAlpha(1.0f);
+                    base03.setAlpha(1.0f);
                     backgroundShadow02.setAlpha(1.0f);
                     audioDeleteConfirmButton.setClickable(true);
                     audioDeleteConfirmButton.setEnabled(true);
@@ -3066,7 +3679,7 @@ public class MainMenu extends AppCompatActivity {
             audioDeleteBackButton.setEnabled(false);
             LinkedList<Animator> animators = new LinkedList<>();
             ObjectAnimator animator;
-            animator = ObjectAnimator.ofFloat(baseFinal, View.ALPHA, 1.0f, 0.0f);
+            animator = ObjectAnimator.ofFloat(base03, View.ALPHA, 1.0f, 0.0f);
             animators.add(animator);
             animator = ObjectAnimator.ofFloat(backgroundShadow02, View.ALPHA, 1.0f, 0.0f);
             animators.add(animator);
@@ -3077,9 +3690,9 @@ public class MainMenu extends AppCompatActivity {
                 @Override
                 public void onAnimationEnd(Animator animation) {
                     backgroundShadow02.setAlpha(0.0f);
-                    baseFinal.setAlpha(0.0f);
+                    base03.setAlpha(0.0f);
                     if (backgroundShadow02.getParent() == ground) ground.removeView(backgroundShadow02);
-                    baseFinal.removeAllViews();
+                    base03.removeAllViews();
                     audioDeleteMask.removeAllViews();
                     audioDeletePadding01.removeAllViews();
                     if (isDelete) {
@@ -3343,8 +3956,6 @@ public class MainMenu extends AppCompatActivity {
             });
             animatorSet.start();
         }
-
-
         private void signOutTransitAnimation01(){
             signOutMask.setEnabled(false);
             signOutTextView.setEnabled(false);
@@ -3419,6 +4030,40 @@ public class MainMenu extends AppCompatActivity {
             });
             animatorSet.start();
         }
+
+        private void surveyReturnAnimation() {
+            surveyBack.setEnabled(false);
+            surveyBack.setClickable(false);
+            surveyForward.setEnabled(false);
+            surveyForward.setClickable(false);
+            LinkedList<Animator> animators = new LinkedList<>();
+            ObjectAnimator animator;
+            animator = ObjectAnimator.ofFloat(surveyBase, View.ALPHA, 1.0f, 0.0f);
+            animators.add(animator);
+            AnimatorSet animatorSet = new AnimatorSet();
+            animatorSet.setDuration(200);
+            animatorSet.playTogether(animators);
+            animatorSet.addListener(new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    surveyBase.setAlpha(0.0f);
+                    base04.removeView(surveyBase);
+                    menuButton01.setEnabled(true);
+                    menuButton01.setClickable(true);
+                    menuButton02.setEnabled(true);
+                    menuButton02.setClickable(true);
+                    menuButton03.setEnabled(true);
+                    menuButton03.setClickable(true);
+                    survey_topButton.setEnabled(true);
+                    survey_topButton.setClickable(true);
+                    for (Button btn : survey_recordList_ButtonList01) {btn.setEnabled(true);btn.setClickable(true);}
+                    for (Button btn : survey_recordList_ButtonList02) {btn.setEnabled(true);btn.setClickable(true);}
+                    survey_scrollView.setEnabled(true);
+                    survey_scrollView.setClickable(true);
+                }
+            });
+            animatorSet.start();
+        }
     }
 
 
@@ -3434,7 +4079,7 @@ public class MainMenu extends AppCompatActivity {
 
         private final int AUDIO_PAGE = 1;
         private final int ACCOUNT_PAGE = 2;
-        private final int TUTORIAL_PAGE = 3;
+        private final int SURVEY_PAGE = 3;
 
         private String[] currDoctorInfo;
 
@@ -3491,12 +4136,18 @@ public class MainMenu extends AppCompatActivity {
         private Button signOutConfirmButton, signOutBackButton;
 
         private int currPageNum;
+        private boolean initial_survey_check;
 
 
 
 
 
         private void patientPage() {
+            initial_survey_check = false;
+            surveyBack.setOnClickListener(back -> {
+                if (!initial_survey_check || currSurveyPage != 0) surveyPageSwitch(false);
+            });
+            surveyForward.setOnClickListener(forward -> surveyPageSwitch(true));
             pathCheck();
             currPageNum = 0;
             initialized = false;
@@ -3550,16 +4201,16 @@ public class MainMenu extends AppCompatActivity {
             menuButton03.setEnabled(false);
             menuButton01.setOnClickListener(audio -> initAudioPage());
             menuButton02.setOnClickListener(account -> initAccountPage());
-            menuButton03.setOnClickListener(tutorial -> initTutorialPage());
+            menuButton03.setOnClickListener(survey -> initSurveyPage());
 
             // set width & height of menu button texts
-            menuText01.setLayoutParams(new ConstraintLayout.LayoutParams(radius, ConstraintLayout.LayoutParams.WRAP_CONTENT));
+            menuText01.setLayoutParams(new ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.WRAP_CONTENT, ConstraintLayout.LayoutParams.WRAP_CONTENT));
             menuText02.setLayoutParams(new ConstraintLayout.LayoutParams(radius, ConstraintLayout.LayoutParams.WRAP_CONTENT));
             menuText03.setLayoutParams(new ConstraintLayout.LayoutParams(radius, ConstraintLayout.LayoutParams.WRAP_CONTENT));
             // set texts of menu buttons
             menuText01.setText(R.string.text_MainMenu_audio);
             menuText02.setText(R.string.text_MainMenu_account);
-            menuText03.setText(R.string.text_MainMenu_tutorial);
+            menuText03.setText(R.string.text_MainMenu_survey);
             // set font & bold of menu button texts
             menuText01.setTypeface(ResourcesCompat.getFont(MainMenu.this, R.font.font_formal), Typeface.BOLD);
             menuText02.setTypeface(ResourcesCompat.getFont(MainMenu.this, R.font.font_formal), Typeface.BOLD);
@@ -3773,9 +4424,9 @@ public class MainMenu extends AppCompatActivity {
             currPageNum = AUDIO_PAGE;  // set current page as audio page
 
             // change menu pattern
-            menuButton01.setImageResource(R.drawable.cd_logo_02);
+            menuButton01.setImageResource(R.drawable.audio_logo_02);
             menuButton02.setImageResource(R.drawable.account_logo_01);
-            menuButton03.setImageResource(R.drawable.book_logo_01);
+            menuButton03.setImageResource(R.drawable.survey_logo_01);
             menuText01.setTextColor(MainMenu.this.getResources().getColor(R.color.menu_cyan));
             menuText02.setTextColor(MainMenu.this.getResources().getColor(R.color.white));
             menuText03.setTextColor(MainMenu.this.getResources().getColor(R.color.white));
@@ -3860,10 +4511,10 @@ public class MainMenu extends AppCompatActivity {
             } catch (Exception e) {
                 e.printStackTrace();
             }
-            base.addView(audio_scrollView);
 
             // reopen
             if (initialized) {
+                base.addView(audio_scrollView);
                 audio_scrollView.setEnabled(true);
                 audio_recordList.setEnabled(true);
                 menuButton01.setClickable(true);
@@ -3875,8 +4526,21 @@ public class MainMenu extends AppCompatActivity {
                 setStatusAudioRecords(true);
             } else {
                 initialized = true;
-                Handler handler = new Handler();
-                handler.postDelayed(this::logInTransitAnimation, 200);
+                try{
+                    Handler handler = new Handler();
+                    File file = new File(MainMenu.this.getFilesDir().toString() +
+                        "/emory_health/data/"+security.encrypt(currUserHashCode)+"/survey/initial_signal.emory");
+                    if (!file.exists()) {
+                        base.addView(audio_scrollView);
+                        handler.postDelayed(this::logInTransitAnimation, 200);
+                    } else {
+                        initial_survey_check = true;
+                        handler.postDelayed(this::surveyInitialAnimation, 200);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    System.exit(-1);
+                }
             }
         }
         private void audio_play(String filename) {
@@ -4166,9 +4830,9 @@ public class MainMenu extends AppCompatActivity {
             currPageNum = ACCOUNT_PAGE;  // set current page as account page
 
             // change menu pattern
-            menuButton01.setImageResource(R.drawable.cd_logo_01);
+            menuButton01.setImageResource(R.drawable.audio_logo_01);
             menuButton02.setImageResource(R.drawable.account_logo_02);
-            menuButton03.setImageResource(R.drawable.book_logo_01);
+            menuButton03.setImageResource(R.drawable.survey_logo_01);
             menuText01.setTextColor(MainMenu.this.getResources().getColor(R.color.white));
             menuText02.setTextColor(MainMenu.this.getResources().getColor(R.color.menu_cyan));
             menuText03.setTextColor(MainMenu.this.getResources().getColor(R.color.white));
@@ -4472,6 +5136,7 @@ public class MainMenu extends AppCompatActivity {
                 currPassword = str;
             }
             rewritePatientData();
+            builder = new AlertDialog.Builder(MainMenu.this);
             builder.setMessage("Remember your new "+hintObj+":\n"+str);
             builder.setTitle("Change " + hintObj +" Successful!");
             builder.setPositiveButton("OK", (dialog, id)->changeToAccountMainAnimation());
@@ -4611,9 +5276,153 @@ public class MainMenu extends AppCompatActivity {
 
 
 
-        private void initTutorialPage() {
+        private void initSurveyPage() {
             System.out.println("Enter initializing tutorial page");
         }
+        private void surveyPageSwitch(boolean isForward) {
+            if (isForward) {
+                if (currSurveyPageChoices[currSurveyPage] == -1) {
+                    warningMsg("Please choose one option.", "Empty Answer!");
+                    return;
+                }
+                currSurveyPage++;
+                if (currSurveyPage >= surveyInfo[currSurvey].length) {
+                    builder = new AlertDialog.Builder(MainMenu.this);
+                    builder.setMessage("Do you want to submit your result?");
+                    builder.setTitle("This is the last page of the survey.");
+                    builder.setPositiveButton("YES", (dialog, id) -> surveyComplete());
+                    builder.setNegativeButton("NO", (dialog, id) -> currSurveyPage--);
+                    builder.show();
+                } else {
+                    surveyBack.setAlpha(1.0f);
+                    surveyBack.setEnabled(true);
+                    surveyBack.setClickable(true);
+                    surveySetText(currSurvey, currSurveyPage, currSurveyPageChoices[currSurveyPage], false);
+                }
+            } else {
+                currSurveyPage--;
+                if (currSurveyPage == -1) {
+                    if (!initial_survey_check) {
+                        builder = new AlertDialog.Builder(MainMenu.this);
+                        builder.setMessage("Do you want to discard this survey and go back to the main page?");
+                        builder.setTitle("This is the first page of the survey.");
+                        builder.setPositiveButton("YES", (dialog, id) -> surveyReturnAnimation());
+                        builder.setNegativeButton("NO", (dialog, id) -> currSurveyPage++);
+                        builder.show();
+                    } else {
+                        currSurveyPage++;
+                    }
+                } else {
+                    surveySetText(currSurvey, currSurveyPage, currSurveyPageChoices[currSurveyPage], false);
+                    if (initial_survey_check && currSurveyPage == 0) {
+                        surveyBack.setEnabled(false);
+                        surveyBack.setClickable(false);
+                        surveyBack.setAlpha(0.0f);
+                    }
+                }
+            }
+        }
+        private void surveyComplete() {
+            try {
+                String path = MainMenu.this.getFilesDir() +"/emory_health/data/" +
+                        security.encrypt(currUserHashCode)+"/survey";
+                File folder = new File(path);
+                if (!folder.exists() && !folder.mkdirs()) {
+                    System.err.println("Error 0x001C5: create survey record directory failed.");
+                    System.exit(-1);
+                }
+                String path01 = path + "/survey_total.emory";
+                File surveyFile = new File(path01);
+                int totalNum = 0;
+                int[][] data = new int[0][];
+                if (!surveyFile.exists()) {
+                    if (!surveyFile.createNewFile()) {
+                        System.err.println("Error 0x001C6: Create file failed");
+                        System.exit(-1);
+                    }
+                } else {
+                    Scanner in = new Scanner(surveyFile);
+                    totalNum = Integer.parseInt(security.decrypt(in.nextLine()));
+                    data = new int[totalNum][4];
+                    for (int i = 0; i < totalNum; i++) {
+                        data[i][0] = Integer.parseInt(security.decrypt(in.nextLine()));
+                        data[i][1] = Integer.parseInt(security.decrypt(in.nextLine()));
+                        data[i][2] = Integer.parseInt(security.decrypt(in.nextLine()));
+                        data[i][3] = Integer.parseInt(security.decrypt(in.nextLine()));
+                    }
+                    in.close();
+                }
+                FileWriter writer = new FileWriter(path01, false);
+                writer.write(security.encrypt(Integer.toString(totalNum+1))+"\n");
+                for (int i = 0; i < totalNum; i++) {
+                    writer.write(security.encrypt(Integer.toString(data[i][0]))+"\n");
+                    writer.write(security.encrypt(Integer.toString(data[i][1]))+"\n");
+                    writer.write(security.encrypt(Integer.toString(data[i][2]))+"\n");
+                    writer.write(security.encrypt(Integer.toString(data[i][3]))+"\n");
+                }
+                int day = 0, month = 0, year = 0;
+                Date date= new Date();
+                Calendar cal;
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                    cal = Calendar.getInstance();
+                    cal.setTime(date);
+                    day = cal.get(Calendar.DAY_OF_MONTH);
+                    month = cal.get(Calendar.MONTH) + 1;
+                    year = cal.get(Calendar.YEAR);
+                }
+                writer.write(security.encrypt(Integer.toString(currSurvey))+"\n");
+                writer.write(security.encrypt(Integer.toString(year))+"\n");
+                writer.write(security.encrypt(Integer.toString(month))+"\n");
+                writer.write(security.encrypt(Integer.toString(day))+"\n");
+                writer.flush();
+                writer.close();
+
+                String path02 = path + "/" + security.encrypt(
+                        Integer.toString(currSurvey)+Integer.toString(year)+Integer.toString(month)+Integer.toString(day))+
+                        ".emory";
+                surveyFile = new File(path02);
+                if (!surveyFile.exists() && !surveyFile.createNewFile()) {
+                    System.err.println("Error 0x001C6: Create patient survey file failed.");
+                    System.exit(-1);
+                }
+                writer = new FileWriter(path02, false);
+                writer.write(security.encrypt(Integer.toString(surveyInfo[currSurvey].length))+"\n");
+                for (int i = 0; i < surveyInfo[currSurvey].length; i++) {
+                    writer.write(security.encrypt(Integer.toString(currSurveyPageChoices[i]))+"\n");
+                }
+                writer.flush();
+                writer.close();
+                File file = new File(MainMenu.this.getFilesDir().toString() +
+                        "/emory_health/data/"+security.encrypt(currUserHashCode)+"/survey/initial_signal.emory");
+                if (file.exists()) file.delete();
+                else {
+                    System.err.println("Error 0x9081A: Initial survey file not existed.");
+                    System.exit(-1);
+                }
+
+                base04.removeView(surveyBase);
+                surveyBack.setEnabled(false);
+                surveyBack.setClickable(false);
+                surveyForward.setEnabled(false);
+                surveyForward.setClickable(false);
+                for (int i = 0; i < 5; i++) {
+                    surveyChoices[i].setEnabled(false);
+                    surveyChoices[i].setClickable(false);
+                }
+                currSurveyPage=0;
+                initial_survey_check = false;
+                surveyCompleteBase.setAlpha(1.0f);
+                base04.addView(surveyCompleteBase);
+                Handler handler = new Handler();
+                handler.postDelayed(this::surveyCompleteAnimation, 2000);
+            } catch (Exception e) {
+                e.printStackTrace();
+                System.exit(-1);
+            }
+        }
+
+
+
         private void destroyCurrPage() {
             menuButton01.setClickable(false);
             menuButton02.setClickable(false);
@@ -4913,8 +5722,6 @@ public class MainMenu extends AppCompatActivity {
             });
             animatorSet.start();
         }
-
-
         private void signOutTransitAnimation01(){
             signOutMask.setEnabled(false);
             signOutTextView.setEnabled(false);
@@ -4985,6 +5792,131 @@ public class MainMenu extends AppCompatActivity {
                     intent.putExtra("com.emory.healthAPP.isSignOutBack", true);
                     finish();
                     startActivity(intent);
+                }
+            });
+            animatorSet.start();
+        }
+
+        private void surveyInitialAnimation() {
+            menuButton01.setEnabled(false);
+            menuButton01.setClickable(false);
+            menuButton02.setEnabled(false);
+            menuButton02.setClickable(false);
+            menuButton03.setEnabled(false);
+            menuButton03.setClickable(false);
+            surveyBase.setAlpha(0.0f);
+            surveyBack.setAlpha(0.0f);
+            surveyBack.setEnabled(false);
+            surveyBack.setClickable(false);
+            surveyForward.setEnabled(false);
+            surveyForward.setClickable(false);
+            for (int i = 0; i < 5; i++) {
+                surveyChoices[i].setEnabled(false);
+                surveyChoices[i].setClickable(false);
+            }
+
+            currSurvey = 0;
+            currSurveyPage = 0;
+            currSurveyPageChoices = new int[surveyInfo[currSurvey].length];
+            for (int i = 0; i < currSurveyPageChoices.length; i++) { currSurveyPageChoices[i] = -1;}
+            surveySetText(currSurvey, currSurveyPage, -1, false);
+            base04.bringToFront();
+            base04.addView(surveyBase);
+
+            LinkedList<Animator> animators = new LinkedList<>();
+            ObjectAnimator animator;
+            animator = ObjectAnimator.ofFloat(surveyBase, View.ALPHA, 0.0f, 1.0f);
+            animators.add(animator);
+            AnimatorSet animatorSet = new AnimatorSet();
+            animatorSet.setDuration(200);
+            animatorSet.playTogether(animators);
+            animatorSet.addListener(new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    surveyBase.setAlpha(1.0f);
+                    emoryLogo01.setAlpha(0.5f);
+                    emoryLogo02.setAlpha(0.15f);
+                    menuMask.setAlpha(1.0f);
+                    surveyBack.setEnabled(false);
+                    surveyBack.setClickable(false);
+                    surveyForward.setEnabled(true);
+                    surveyForward.setClickable(true);
+                    for (int i = 0; i < 5; i++) {
+                        surveyChoices[i].setEnabled(true);
+                        surveyChoices[i].setClickable(true);
+                    }
+                }
+            });
+            animatorSet.start();
+        }
+        private void surveyCompleteAnimation() {
+            LinkedList<Animator> animators = new LinkedList<>();
+            ObjectAnimator animator;
+            animator = ObjectAnimator.ofFloat(surveyCompleteBase, View.ALPHA, 1.0f, 0.0f);
+            animators.add(animator);
+            AnimatorSet animatorSet = new AnimatorSet();
+            animatorSet.setDuration(500);
+            animatorSet.playTogether(animators);
+            animatorSet.addListener(new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    surveyCompleteBase.setAlpha(0.0f);
+                    base04.removeView(surveyCompleteBase);
+                    surveyBase.setAlpha(0.0f);
+                    base04.addView(surveyBase);
+                    menuMask.setAlpha(1.0f);
+                    menuButton01.setClickable(true);
+                    menuButton02.setClickable(true);
+                    menuButton03.setClickable(true);
+                    menuButton01.setEnabled(true);
+                    menuButton02.setEnabled(true);
+                    menuButton03.setEnabled(true);
+                    audio_scrollView.setEnabled(true);
+                    audio_recordList.setEnabled(true);
+                }
+            });
+            animatorSet.start();
+        }
+        private void surveyReturnAnimation() {
+            surveyBack.setEnabled(false);
+            surveyBack.setClickable(false);
+            surveyForward.setEnabled(false);
+            surveyForward.setClickable(false);
+            if (initial_survey_check) {
+                base.addView(audio_scrollView);
+                audio_scrollView.setEnabled(false);
+                audio_scrollView.setClickable(false);
+            }
+            LinkedList<Animator> animators = new LinkedList<>();
+            ObjectAnimator animator;
+            animator = ObjectAnimator.ofFloat(surveyBase, View.ALPHA, 1.0f, 0.0f);
+            animators.add(animator);
+            AnimatorSet animatorSet = new AnimatorSet();
+            animatorSet.setDuration(200);
+            animatorSet.playTogether(animators);
+            animatorSet.addListener(new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    surveyBase.setAlpha(0.0f);
+                    base04.removeView(surveyBase);
+                    menuButton01.setEnabled(true);
+                    menuButton01.setClickable(true);
+                    menuButton02.setEnabled(true);
+                    menuButton02.setClickable(true);
+                    menuButton03.setEnabled(true);
+                    menuButton03.setClickable(true);
+                    if (initial_survey_check) {
+                        audio_scrollView.setEnabled(true);
+                        audio_scrollView.setClickable(true);
+                        initial_survey_check = false;
+                    } else {
+                        /*
+                        for (Button btn : survey_recordList_ButtonList01) {btn.setEnabled(true);btn.setClickable(true);}
+                        for (Button btn : survey_recordList_ButtonList02) {btn.setEnabled(true);btn.setClickable(true);}
+                        survey_scrollView.setEnabled(true);
+                        survey_scrollView.setClickable(true);
+                        */
+                    }
                 }
             });
             animatorSet.start();

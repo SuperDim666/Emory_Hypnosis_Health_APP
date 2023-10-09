@@ -13,7 +13,7 @@
     <string name="text_menuServices">MenuServices</string>
     <string name="action_settings">Settings</string>
     <string name="text_MainMenu_account">Account</string>
-    <string name="text_MainMenu_tutorial">Tutorial</string>
-    <string name="text_MainMenu_audio">Audio</string>
+    <string name="text_MainMenu_survey">Survey</string>
+    <string name="text_MainMenu_audio">Treatment</string>
     <string name="text_MainMenu_upload">UPLOAD AUDIO</string>
 </resources>

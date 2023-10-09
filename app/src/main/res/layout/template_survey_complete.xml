@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    android:orientation="vertical">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <!--layout_width:   PDS.getHeight()  * 0.15f-->
+        <!--layout_height:  PDS.getHeight()  * 0.15f-->
+        <!--marginStart: (PDS.getWidth()-PDS.getHeight()*0.15f)/2.0f-->
+        <!--marginTop:   PDS.getHeight()  * 0.25f-->
+        <ImageView
+            android:id="@+id/abccomplete"
+            android:layout_width="133.65dp"
+            android:layout_height="133.65dp"
+            android:layout_marginStart="138.675dp"
+            android:layout_marginTop="222.75dp"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            android:background="@drawable/ic_survey_complete"
+            />
+        <!--textSize:   PDS.getWidth()  * 0.0729927f-->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:layout_constraintTop_toBottomOf="@+id/abccomplete"
+            app:layout_constraintStart_toStartOf="parent"
+            android:layout_marginTop="10dp"
+            android:textStyle="bold"
+            android:text="Thank you"
+            android:textSize="30dp"
+            android:gravity="center"
+            />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</RelativeLayout>

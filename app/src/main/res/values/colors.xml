@@ -8,7 +8,7 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="menu_cyan">#57FFEB</color>
-    <color name="signInBackgroundColor">#7EA7D4</color>
+    <color name="signInBackgroundColor">#A7D1FF</color>
     <color name="buttonColor01">#5D5D5D</color>
     <color name="buttonAudioUpload">#0065C7</color>
     <color name="buttonAudioButton">#1A30C4</color>

@@ -52,10 +52,17 @@
         tools:ignore="UselessParent" />
 
     <RelativeLayout
-        android:id="@+id/MainPage_BaseFinal"
+        android:id="@+id/MainPage_Base03"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         tools:ignore="UselessParent" >
     </RelativeLayout>
+
+    <RelativeLayout
+    android:id="@+id/MainPage_Base04"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:ignore="UselessParent" >
+</RelativeLayout>
 
 </RelativeLayout>

@@ -18,30 +18,51 @@
         tools:ignore="ContentDescription">
     </ImageView>
 
+    <RelativeLayout
+        android:id="@+id/MainPage_Edit"
+        android:layout_width="384.27dp"
+        android:layout_height="62.37dp"
+        android:layout_marginTop="13.365dp"
+        android:layout_marginStart="13.365dp">
+
+        <TextView
+            android:id="@+id/MainPage_Edit2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:enabled="true"
+            android:layout_centerVertical="true"
+            app:fontFamily="@font/font_burgela_bold"
+            android:text="Doctor ID:\nAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+            android:textSize="20dp"
+            android:textColor="@color/white" />
+
+    </RelativeLayout>
 
     <ScrollView
-        android:id="@+id/xxxxxx"
+        android:id="@+id/MainPage_AudioPage_ScrollView"
         android:layout_width="match_parent"
-        android:layout_height="654.885dp">
+        android:layout_height="654.885dp"
+        android:layout_marginTop="89.1dp">
         <LinearLayout
-            android:id="@+id/x2xxxxx"
+            android:id="@+id/MainPage_AudioPage_RecordsList"
             android:orientation="vertical"
             android:layout_width="match_parent"
             android:layout_height="match_parent">
 
-            <Button
-                android:id="@+id/xx3"
+            <ImageView
+                android:id="@+id/MainPage_Account_Button01"
                 android:layout_width="384.27dp"
                 android:layout_height="62.37dp"
                 android:layout_marginTop="27dp"
                 android:layout_marginStart="13.365dp"
                 android:enabled="true"
                 style="@style/Button2"
+                android:layout_centerHorizontal="true"
                 android:text="@string/text_MainMenu_upload"
                 android:textColor="@color/white"
                 >
-            </Button>
-            <Button
+            </ImageView>
+            <ImageView
                 android:id="@+id/MainPage_Account_Button02"
                 android:layout_width="384.27dp"
                 android:layout_height="62.37dp"
@@ -49,11 +70,12 @@
                 android:layout_marginStart="13.365dp"
                 android:enabled="true"
                 style="@style/Button2"
+                android:layout_centerHorizontal="true"
                 android:text="@string/text_MainMenu_upload"
                 android:textColor="@color/white"
                 >
-            </Button>
-            <Button
+            </ImageView>
+            <ImageView
                 android:id="@+id/MainPage_Account_Button03"
                 android:layout_width="384.27dp"
                 android:layout_height="62.37dp"
@@ -61,13 +83,20 @@
                 android:layout_marginStart="13.365dp"
                 android:enabled="true"
                 style="@style/Button2"
+                android:layout_centerHorizontal="true"
                 android:text="@string/text_MainMenu_upload"
                 android:textColor="@color/white"
                 >
-            </Button>
+            </ImageView>
+
+            <ImageView
+                android:id="@+id/init_background"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:src="@drawable/shadow_background"
+                tools:ignore="ContentDescription"></ImageView>
         </LinearLayout>
     </ScrollView>
-
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/MainPage_MenuMask"
@@ -88,7 +117,7 @@
             app:layout_constraintStart_toStartOf="parent"
             android:background="@android:color/transparent"
             android:clickable="false"
-            android:src="@drawable/audio_logo_02" />
+            android:src="@drawable/audio_logo_01" />
 
         <ImageView
             android:id="@+id/MainPage_MenuButton2"
@@ -100,12 +129,12 @@
             app:layout_constraintStart_toEndOf="@+id/MainPage_MenuButton1"
             android:clickable="false"
             android:background="@null"
-            android:src="@drawable/account_logo_01"/>
+            android:src="@drawable/account_logo_02"/>
 
         <ImageView
             android:id="@+id/MainPage_MenuButton3"
-            android:layout_width="80dp"
-            android:layout_height="85dp"
+            android:layout_width="75dp"
+            android:layout_height="75dp"
             android:layout_marginStart="41.49375dp"
             android:layout_marginTop="16.929dp"
             app:layout_constraintTop_toTopOf="parent"
@@ -116,7 +145,7 @@
 
         <TextView
             android:id="@+id/MainPage_MenuText1"
-            android:layout_width="85dp"
+            android:layout_width="75dp"
             android:layout_height="wrap_content"
             app:layout_constraintTop_toBottomOf="@+id/MainPage_MenuButton1"
             app:layout_constraintStart_toStartOf="@+id/MainPage_MenuButton1"
@@ -125,10 +154,10 @@
             android:textSize="19sp"
             android:textStyle="bold"
             android:textAlignment="center"
-            android:textColor="@color/menu_cyan"/>
+            android:textColor="@color/white"/>
         <TextView
             android:id="@+id/MainPage_MenuText2"
-            android:layout_width="85dp"
+            android:layout_width="75dp"
             android:layout_height="wrap_content"
             app:layout_constraintTop_toBottomOf="@+id/MainPage_MenuButton2"
             app:layout_constraintStart_toStartOf="@+id/MainPage_MenuButton2"
@@ -137,10 +166,10 @@
             android:fontFamily="@font/font_formal"
             android:textStyle="bold"
             android:textAlignment="center"
-            android:textColor="@color/white"/>
+            android:textColor="@color/menu_cyan"/>
         <TextView
             android:id="@+id/MainPage_MenuText3"
-            android:layout_width="85dp"
+            android:layout_width="75dp"
             android:layout_height="wrap_content"
             app:layout_constraintTop_toBottomOf="@+id/MainPage_MenuButton3"
             app:layout_constraintStart_toStartOf="@+id/MainPage_MenuButton3"
@@ -153,5 +182,80 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
+    <!--layout_width: PDS.getWidth() * 0.9349635036496f-->
+    <!--layout_marginStart: PDS.getWidth() * 0.0325182481752f-->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/account_change"
+        android:layout_width="384.2699999999856dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="13.3650000000072dp"
+        android:layout_centerVertical="true"
+        android:background="@drawable/main_page_blue_board"
+        tools:ignore="ContentDescription"
+        >
+
+        <!--cardBackgroundColor:inputTextWhite-->
+        <!--layout_width:  match_parent-->
+        <!--layout_height: PDS.getHeight() * 0.05611672278f-->
+        <!--textSize:      PDS.getWidth() * 0.0486618004866f-->
+        <!--textColor:     #FFFFFF-->
+        <!--textStyle:     bold-->
+        <!--gravity:       center-->
+        <TextView
+            android:id="@+id/account_sign_out"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:text="Are you sure to sign out?"
+            android:textSize = "20dp"
+            android:textColor="#FFFFFF"
+            android:fontFamily="@font/font_burgela_bold"
+            android:gravity="center"
+            android:textStyle="bold"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintLeft_toLeftOf="parent">
+
+        </TextView>
+
+        <!--layout_height: PDS.getHeight() * 0.0617283950617f-->
+        <!--layout_marginTop: PDS.getHeight() * 0.01122334455667789f-->
+        <RelativeLayout
+            android:id="@+id/MainPage_changeButtonMask"
+            android:layout_width="match_parent"
+            android:layout_height="55dp"
+            app:layout_constraintTop_toBottomOf="@+id/account_sign_out">
+
+            <!--layout_width:      PDS.getWidth()  * 0.364963503649635f-->
+            <!--layout_height:     PDS.getHeight() * 0.05611672278f-->
+            <!--textSize:          PDS.getHeight() * 0.036496350364963503f-->
+            <!--layout_marginLeft: PDS.getWidth()  * 0.2849999999999825f-->
+            <Button
+                android:id="@+id/SignUpControl_button01"
+                style="@style/Button1"
+                android:layout_width="150dp"
+                android:layout_height="50dp"
+                android:layout_marginLeft="117.1349999999928075dp"
+                app:layout_constraintTop_toTopOf="parent"
+                android:alpha="1.0"
+                android:enabled="false"
+                android:text="REGISTER"
+                android:textSize = "15dp"/>
+
+            <!--layout_width:      PDS.getHeight() * 0.05611672278f-->
+            <!--layout_height:     PDS.getHeight() * 0.05611672278f-->
+            <!--layout_marginLeft: PDS.getWidth() - PDS.getHeight() * 0.102132435465768799f-->
+            <Button
+                android:id="@+id/audio_board_back"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:layout_marginLeft="320dp"
+                android:background="@drawable/ic_account_change_button_return"
+                />
+
+        </RelativeLayout>
+
+        <!--layout_marginTop: PDS.getHeight() * 0.005611672278338945f-->
+
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
 </RelativeLayout>

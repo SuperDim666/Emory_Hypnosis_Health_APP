@@ -6,4 +6,8 @@
         name="boolean_key" />
     <item type="id"
         name="audio_assign_hashCode" />
+    <item type="id"
+        name="survey_assign_patientData" />
+    <item type="id"
+        name="survey_choose_number" />
 </resources>

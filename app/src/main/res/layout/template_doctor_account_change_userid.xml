@@ -110,7 +110,7 @@
             app:layout_constraintStart_toStartOf="parent"
             android:background="@android:color/transparent"
             android:clickable="false"
-            android:src="@drawable/cd_logo_01" />
+            android:src="@drawable/audio_logo_01" />
 
         <ImageView
             android:id="@+id/MainPage_MenuButton2"
@@ -134,7 +134,7 @@
             app:layout_constraintStart_toEndOf="@+id/MainPage_MenuButton2"
             android:clickable="false"
             android:background="@null"
-            android:src="@drawable/book_logo_01"/>
+            android:src="@drawable/survey_logo_01"/>
 
         <TextView
             android:id="@+id/MainPage_MenuText1"
@@ -166,7 +166,7 @@
             android:layout_height="wrap_content"
             app:layout_constraintTop_toBottomOf="@+id/MainPage_MenuButton3"
             app:layout_constraintStart_toStartOf="@+id/MainPage_MenuButton3"
-            android:text="@string/text_MainMenu_tutorial"
+            android:text="@string/text_MainMenu_survey"
             android:textSize="19sp"
             android:fontFamily="@font/font_formal"
             android:textStyle="bold"

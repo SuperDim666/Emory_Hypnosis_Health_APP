@@ -150,9 +150,6 @@ public class SignInControl extends AppCompatActivity {
             System.exit(-1);
         }
 
-
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-
         // Click the [Sign Up] button
         // Check validity of log-in info and continue to main screen
         buttonSignIn.setOnClickListener(signIn -> {
@@ -171,7 +168,7 @@ public class SignInControl extends AppCompatActivity {
                 while (userDataItr.hasNext()) {
                     Map.Entry<String, String[]> userDataPair = userDataItr.next();
                     if (userDataPair.getKey().equals(currUserID) &&
-                        userDataPair.getValue()[0].equals(currPassword)) {
+                            userDataPair.getValue()[0].equals(currPassword)) {
                         this.currUserID = currUserID;
                         this.currPassword = currPassword;
                         this.currUserHashCode = userDataPair.getValue()[1];
@@ -188,14 +185,14 @@ public class SignInControl extends AppCompatActivity {
             // If a match is found, user confirmed
             if (admin || match) {
                 if (admin)
-                    adminWrite(builder);
+                    adminWrite();
                 else
                     endAnimation();
 
                 // If a match is not found, alert
             } else {
                 String title = (isDoctor) ? "Wrong doctor ID or password!" : "Wrong user ID or password!";
-                warningMsg(builder, "Please try again.", title);
+                warningMsg("Please try again.", title);
             }
         });
 
@@ -397,7 +394,7 @@ public class SignInControl extends AppCompatActivity {
         } while (doctorData.containsKey(currUserID) || containsUserHashCode(currUserHashCode));
         return new String[] {currUserID, currPassword, currUserHashCode};
     }
-    private void adminWrite(AlertDialog.Builder builder) {
+    private void adminWrite() {
 
         // Set up new doctorID & new password
         String[] randomDoctor = randomCreateUser (
@@ -418,8 +415,7 @@ public class SignInControl extends AppCompatActivity {
                 }
             } catch (IOException e) {
                 e.printStackTrace();
-                warningMsg(builder,
-                        "Please check if your disk is full or no permission allowed.",
+                warningMsg("Please check if your disk is full or no permission allowed.",
                         "Data file cannot be created!"
                 );
                 System.exit(-1);
@@ -450,6 +446,7 @@ public class SignInControl extends AppCompatActivity {
             System.exit(-1);
         }
 
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setMessage(String.format("Welcome!\nHere is your new Doctor ID and password!\n\n" +
                 "Doctor ID: %s\nPassword: %s", currUserID, currPassword));
         builder.setTitle("Admin check successful!");
@@ -460,8 +457,8 @@ public class SignInControl extends AppCompatActivity {
     }
 
     // Warning messages
-    private void warningMsg(AlertDialog.Builder builder,
-                            final String msg, final String title) {
+    private void warningMsg(final String msg, final String title) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setMessage(msg);
         builder.setTitle(title);
         builder.setPositiveButton("OK", (dialog, id) -> {
@@ -577,7 +574,7 @@ public class SignInControl extends AppCompatActivity {
         animator = ObjectAnimator.ofFloat(emoryLogo02, View.ALPHA, 0.0f, 0.5f);
         animators.add(animator);
         animatorSet = new AnimatorSet();
-        animatorSet.setDuration(2000);
+        animatorSet.setDuration(1000);
         animatorSet.playTogether(animators);
         animatorSet.addListener(new AnimatorListenerAdapter() {
             @Override
@@ -603,7 +600,7 @@ public class SignInControl extends AppCompatActivity {
         animator = ObjectAnimator.ofFloat(buttonSwitch, View.ALPHA, 0.0f, 1.0f);
         animators.add(animator);
         animatorSet = new AnimatorSet();
-        animatorSet.setDuration(2000);
+        animatorSet.setDuration(1500);
         animatorSet.playTogether(animators);
         animatorSet.addListener(new AnimatorListenerAdapter() {
             @Override
@@ -643,7 +640,7 @@ public class SignInControl extends AppCompatActivity {
         animator = ObjectAnimator.ofFloat(buttonSwitch, View.ALPHA, 1.0f, 0.0f);
         animators.add(animator);
         animatorSet = new AnimatorSet();
-        animatorSet.setDuration(750);
+        animatorSet.setDuration(200);
         animatorSet.playTogether(animators);
         animatorSet.addListener(new AnimatorListenerAdapter() {
             @Override
@@ -677,7 +674,7 @@ public class SignInControl extends AppCompatActivity {
         animator = ObjectAnimator.ofFloat(buttonSwitch, View.ALPHA, 0.0f, 1.0f);
         animators.add(animator);
         animatorSet = new AnimatorSet();
-        animatorSet.setDuration(750);
+        animatorSet.setDuration(200);
         animatorSet.playTogether(animators);
         animatorSet.addListener(new AnimatorListenerAdapter() {
             @Override
@@ -717,7 +714,7 @@ public class SignInControl extends AppCompatActivity {
         animator = ObjectAnimator.ofFloat(buttonSwitch, View.ALPHA, 1.0f, 0.0f);
         animators.add(animator);
         animatorSet = new AnimatorSet();
-        animatorSet.setDuration(1000);
+        animatorSet.setDuration(750);
         animatorSet.playTogether(animators);
         animatorSet.addListener(new AnimatorListenerAdapter() {
             @Override
